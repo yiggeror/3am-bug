@@ -1,0 +1,4 @@
+node_modules/
+production/build/
+__pycache__/
+*.log

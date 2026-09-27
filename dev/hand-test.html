@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#222}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+import { DESIGNS } from '../js/human/design.js';
+import { drawHand } from '../js/human/hand.js';
+import { Fig } from '../js/figure.js';
+import { setBoil } from '../js/draw.js';
+import { chain, tr, sc, rot } from '../js/mat.js';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+window.render = (arg) => {
+  const D = DESIGNS[arg || 'A'];
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = '#f5efe3'; ctx.fillRect(0,0,1920,1080);
+  setBoil(0);
+  const poses = [
+    { view: 'back', curl: 0.1, spread: 0.6, thumb: 0.6 },
+    { view: 'back', curl: 0.55, spread: 0.2, thumb: 0.3 },
+    { view: 'side', curl: 0.85, thumb: 0.3 },
+    { view: 'side', curl: 0.85, thumb: 0.3, press: [0.8, 0, 0, 0] },
+    { view: 'front', curl: 0.1 },
+    { view: 'fist' },
+    { view: 'point' },
+    { view: 'palm', curl: 0.05, spread: 0.8, thumb: 0.8 },
+  ];
+  poses.forEach((hp, i) => {
+    ctx.save();
+    ctx.translate(180 + (i % 4) * 440, 300 + Math.floor(i / 4) * 450);
+    ctx.scale(22, 22);
+    const fig = new Fig(ctx, { lw: 4 });
+    drawHand(fig, chain(tr(0,0), rot(i===4?Math.PI/2:0)), D, hp, 0, 'h');
+    fig.draw();
+    ctx.restore();
+  });
+};
+window.__ready = true;
+</script></body></html>
