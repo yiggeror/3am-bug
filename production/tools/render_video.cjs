@@ -13,7 +13,7 @@ const fps = +(args.fps || 24);
 const workers = +(args.workers || 4);
 const scale = +(args.scale || 1);
 const root = path.resolve(__dirname, '../..');
-const film = args.film || '../js/reel.js';
+const film = args.film || '../js/film/index.js';
 const framesDir = args.frames || path.join(root, 'production/build/frames_' + path.basename(film, '.js'));
 const out = args.out || path.join(root, 'film/out.mp4');
 

@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:"Patrick Hand";src:url(../fonts/PatrickHand-Regular.ttf)}body{margin:0;background:#222}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+import { drawBug } from '../js/bug.js';
+import { drawCube2 } from '../js/cube2.js';
+import { setBoil, text } from '../js/draw.js';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+window.render = () => {
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = '#1b1c25'; ctx.fillRect(0,0,1920,1080); setBoil(0);
+  const L = [
+    ['idle', {}], ['run', { run: 0.3, runAmt: 1, rot: 0.08 }], ['taunt', { mouth: 'tongue', eyes: 'sly', flip: -1, ant: 0.4 }], ['scared', { eyes: 'wide', mouth: 'o', sq: -0.1, ant: -0.6 }],
+    ['disguise .5', { disguise: 0.5 }], ['disguise 1', { disguise: 1, peek: 0.6, feet: 1 }], ['caught', { eyes: 'squeeze', mouth: 'frown', sq: 0.2 }], ['dizzy', { eyes: 'dizzy', mouth: 'o' }],
+  ];
+  L.forEach(([n, o], i) => {
+    const x = 200 + (i % 4) * 450, y = 380 + Math.floor(i / 4) * 440;
+    drawBug(ctx, { x, y, size: 200, ...o });
+    text(ctx, n, x, y + 60, { size: 34, color: '#ddd', still: true });
+  });
+  drawCube2(ctx, { x: 1700, y: 1030, size: 160, lookX: -0.8, ink: '#1a1512' });
+};
+window.__ready = true;
+</script></body></html>

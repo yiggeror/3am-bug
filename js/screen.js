@@ -33,9 +33,14 @@ export const CODE = [
   [],
   [['k', 'function '], ['f', 'applyCoupon'], ['p', '('], ['v', 'total'], ['p', ', '], ['v', 'coupon'], ['p', ') {']],
   [['c', '  // TODO: 满减规则 (3 weeks ago)']],
-  [['k', '  return '], ['v', 'coupon'], ['p', '.'], ['x', 'percent']],
-  [['o', '    ? '], ['v', 'total'], ['o', ' * '], ['p', '('], ['n', '1'], ['o', ' - '], ['v', 'coupon'], ['p', '.'], ['x', 'percent'], ['o', ' / '], ['n', '100'], ['p', ')']],
-  [['o', '    : '], ['v', 'total'], ['o', ' - '], ['v', 'coupon'], ['p', '.'], ['x', 'amount'], ['p', ';']],
+  [['k', '  return '], ['v', 'coupon'], ['p', '.'], ['x', 'rules'], ['p', '.'], ['f', 'reduce'], ['p', '(('], ['v', 'sum'], ['p', ', '], ['v', 'rule'], ['p', ') '], ['o', '=>'], ['p', ' {']],
+  [['k', '    if '], ['p', '('], ['v', 'rule'], ['p', '.'], ['x', 'active'], ['p', ') {']],
+  [['k', '      return '], ['f', 'check'], ['p', '('], ['v', 'rule'], ['p', ', ('], ['v', 'ok'], ['p', ') '], ['o', '=>'], ['p', ' {']],
+  [['k', '        if '], ['p', '('], ['v', 'ok'], ['p', ') { '], ['k', 'return '], ['v', 'sum'], ['o', ' * '], ['v', 'rule'], ['p', '.'], ['x', 'rate'], ['p', '; }']],
+  [['p', '      });']],
+  [['p', '    }']],
+  [['k', '    return '], ['v', 'sum'], ['p', ';']],
+  [['p', '  }, '], ['v', 'total'], ['p', ');']],
   [['p', '}']],
 ];
 export const BUG_LINE = 5; // 0-based: the for loop
@@ -80,7 +85,7 @@ export const TEST_PASS = [
 ];
 
 // ------------------------------------------------------------------ editor
-const ED = { x: 0, y: 44, w: 1160, h: 1036, lh: 42, fs: 27, gut: 86 };
+const ED = { x: 0, y: 44, w: 1160, h: 1036, lh: 38.5, fs: 25, gut: 80 };
 export const TERM = { x: 1172, y: 44, w: 748, h: 1036, lh: 36, fs: 23 };
 
 function tokColor(k) { return { k: PAL.kw, f: PAL.fn, s: PAL.str, n: PAL.num, c: PAL.cm, p: PAL.punc, v: PAL.text, o: PAL.op, x: PAL.prop }[k] || PAL.text; }
@@ -144,6 +149,21 @@ export function drawEditor(ctx, sc, t) {
     ctx.fillStyle = '#ffcc66';
     ctx.fillRect(x + gut + 16 + sc.cursor.col * cw - 1, ly - lh * 0.4, 3, lh * 0.8);
   }
+  // find widget
+  if (sc.find) {
+    const fx = x + w - 470, fy = y + 8;
+    ctx.fillStyle = '#2a2c3b'; ctx.beginPath(); ctx.roundRect(fx, fy, 380, 46, 6); ctx.fill();
+    ctx.strokeStyle = '#ffcc66'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = `20px ${MONO_FONT}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillStyle = PAL.text; ctx.fillText(sc.find.q + (Math.floor(t * 2) % 2 ? '|' : ''), fx + 16, fy + 24);
+    ctx.fillStyle = PAL.dim; ctx.textAlign = 'right'; ctx.fillText(sc.find.count || '', fx + 366, fy + 24); ctx.textAlign = 'left';
+  }
+  // problems badge in the status bar
+  ctx.fillStyle = '#17181f'; ctx.fillRect(x, y + h - 30, w, 30);
+  ctx.font = `17px ${MONO_FONT}`; ctx.textBaseline = 'middle';
+  if (sc.problems) { ctx.fillStyle = PAL.red; ctx.fillText(`⊗ ${sc.problems >= 99 ? '99+' : sc.problems} problems`, x + 16, y + h - 15); }
+  else { ctx.fillStyle = PAL.dim; ctx.fillText('⊗ 0  ⚠ 0', x + 16, y + h - 15); }
+  ctx.fillStyle = PAL.dim; ctx.textAlign = 'right'; ctx.fillText('JavaScript   UTF-8   Ln ' + ((sc.cursor?.line ?? 0) + 1) + ', Col ' + ((sc.cursor?.col ?? 0) + 1), x + w - 16, y + h - 15); ctx.textAlign = 'left';
   // minimap strip
   ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(x + w - 70, y, 70, h);
   for (let i = 0; i < code.length; i++) {
@@ -204,7 +224,7 @@ export function drawTerminal(ctx, st, t) {
   ctx.font = `${fs}px ${MONO_FONT}, "ZCOOL KuaiLe"`; ctx.textBaseline = 'middle';
   ctx.fillStyle = PAL.dim; ctx.fillText('>', x + 32, py + 2);
   const inp = st.input || '';
-  ctx.fillStyle = PAL.text; ctx.fillText(inp, x + 58, py + 2);
+  ctx.fillStyle = st.inputColor || PAL.text; ctx.fillText(inp, x + 58, py + 2);
   const iw = ctx.measureText(inp).width;
   st.caretX = x + 60 + iw; st.caretY = py;
   if (Math.floor(t * 1.8) % 2 === 0 || st.caretSolid) { ctx.fillStyle = PAL.text; ctx.fillRect(x + 60 + iw, py - 14, 12, 30); }
