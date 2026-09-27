@@ -35,13 +35,13 @@ for (let i = 0; i + 1 < cuts.length; i++) {
 }
 // soundtrack
 const wav = path.join(root, 'production/build/soundtrack.wav');
-ff(['-i', wav, '-t', String(DURATION), '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', path.join(media, 'soundtrack.m4a')]);
-console.log('soundtrack.m4a', (fs.statSync(path.join(media, 'soundtrack.m4a')).size / 1e6).toFixed(1), 'MB');
+ff(['-i', wav, '-t', String(DURATION), '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', path.join(media, 'soundtrack.mp4')]);
+console.log('soundtrack.mp4', (fs.statSync(path.join(media, 'soundtrack.mp4')).size / 1e6).toFixed(1), 'MB');
 // poster: the room at night
 ff(['-i', path.join(frames, `${String(Math.round(12.0 * FPS)).padStart(6, '0')}.jpg`), '-vf', 'scale=1280:720:flags=lanczos', '-q:v', '4', path.join(media, 'poster.jpg')]);
 
 // the page: site_src/index.html is page content; the standalone site gets a full document around it
-const MEDIA = { duration: +DURATION.toFixed(4), audio: 'media/soundtrack.m4a', parts };
+const MEDIA = { duration: +DURATION.toFixed(4), audio: 'media/soundtrack.mp4', parts };
 const page = fs.readFileSync(path.join(root, 'site_src/index.html'), 'utf8').replace(/\/\*__MEDIA__\*\/[\s\S]*?\/\*__END__\*\//, JSON.stringify(MEDIA));
 fs.writeFileSync(path.join(root, 'production/build/player_page.html'), page);
 const title = page.match(/<title>.*?<\/title>/)[0];

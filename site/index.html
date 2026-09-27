@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>凌晨三点的 Bug</title>
+<style>[hidden]{display:none!important}*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Patrick+Hand&family=ZCOOL+KuaiLe&display=swap">
+<style>
+/* A single dark look on purpose: the film happens at night, in front of a screen. */
+:root {
+  color-scheme: dark;
+  --night: #111219;
+  --panel: #1a1b26;
+  --line: #2b2d3e;
+  --text: #f1e9d8;
+  --muted: #9c9483;
+  --dim: #6e6a78;
+  --orange: #f39a62;
+  --orange-deep: #e8743b;
+  --bug: #c44ee8;
+  --green: #7fd88f;
+  --focus: #ffd166;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --hand: "Patrick Hand", "Comic Sans MS", cursive;
+  --display: "ZCOOL KuaiLe", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --body: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--night); color: var(--text); font: 15px/1.65 var(--body); padding-inline: 16px; padding-block: 28px 48px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { margin: 0; font: 400 clamp(34px, 6.4vw, 58px)/1.1 var(--display); letter-spacing: .02em; text-wrap: balance; }
+h1 .b { color: var(--orange); }
+.en { font: 400 clamp(20px, 3vw, 26px)/1 var(--hand); color: var(--muted); }
+.meta { width: 100%; font: 13px/1.5 var(--mono); color: var(--dim); }
+
+/* ---------------------------------------------------------------- the screen */
+.stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px -30px rgba(120, 140, 255, .25); user-select: none; -webkit-user-select: none; }
+.stage video, .stage .poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.stage video { opacity: 0; }
+.stage video.on { opacity: 1; }
+.poster { z-index: 1; transition: opacity .4s; }
+.big, .spinner { z-index: 2; }
+.stage.started .poster { opacity: 0; pointer-events: none; }
+.big { position: absolute; inset: 0; display: grid; place-items: center; background: none; border: 0; cursor: pointer; color: var(--text); }
+.big span { display: grid; place-items: center; gap: 8px; }
+.big .disc { width: clamp(64px, 11vw, 96px); aspect-ratio: 1; border-radius: 50%; background: rgba(17, 18, 25, .72); border: 2px solid var(--orange); display: grid; place-items: center; transition: transform .15s; }
+.big:hover .disc { transform: scale(1.06); }
+.big .disc::after { content: ""; margin-left: 8%; border-left: clamp(18px, 3vw, 28px) solid var(--orange); border-top: clamp(11px, 1.9vw, 17px) solid transparent; border-bottom: clamp(11px, 1.9vw, 17px) solid transparent; }
+.big small { font: 13px var(--mono); color: var(--text); background: rgba(17, 18, 25, .72); padding: 2px 10px; border-radius: 99px; }
+.stage.started .big { display: none; }
+.spinner { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px; border-radius: 50%; border: 3px solid rgba(243, 154, 98, .25); border-top-color: var(--orange); animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------------------------------------------------------------- controls */
+.controls { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 10px 14px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--line); background: #22233a; color: var(--text); cursor: pointer; font: 600 15px var(--mono); }
+.btn:hover { border-color: var(--orange); }
+.btn:focus-visible, .track:focus-visible, .chapters button:focus-visible, .big:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+.time { font: 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.time b { color: var(--text); font-weight: 600; }
+.track { position: relative; height: 34px; cursor: pointer; touch-action: none; }
+.bands { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px; overflow: hidden; display: flex; opacity: .55; }
+.bands i { height: 100%; }
+.fill { position: absolute; left: 0; top: 14px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(243,154,98,.0), rgba(243,154,98,.9)); pointer-events: none; }
+.ticks { position: absolute; inset: 0; pointer-events: none; }
+.ticks i { position: absolute; top: 11px; width: 2px; height: 12px; background: var(--text); opacity: .35; border-radius: 1px; }
+/* the playhead is the little friend */
+.head { position: absolute; top: 5px; width: 26px; height: 18px; margin-left: -13px; border-radius: 4px; background: var(--orange); border: 2px solid #15110f; pointer-events: none; }
+.head::before, .head::after { content: ""; position: absolute; top: 4px; width: 3px; height: 6px; background: #15110f; border-radius: 1px; }
+.head::before { left: 6px; } .head::after { right: 6px; }
+.head b { position: absolute; bottom: -7px; width: 3px; height: 5px; background: var(--orange); border: 1px solid #15110f; border-top: 0; }
+.head b:nth-child(1) { left: 3px; } .head b:nth-child(2) { left: 8px; } .head b:nth-child(3) { right: 8px; } .head b:nth-child(4) { right: 3px; }
+.tip { position: absolute; bottom: 36px; transform: translateX(-50%); white-space: nowrap; font: 12px var(--mono); color: var(--text); background: #0b0c12; border: 1px solid var(--line); padding: 2px 8px; border-radius: 6px; pointer-events: none; }
+
+/* fullscreen: the controls float over the picture and hide when idle */
+.player:fullscreen, .player.pseudo { background: #000; display: grid; place-items: center; padding: 0; }
+.player.pseudo { position: fixed; inset: 0; z-index: 50; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.player:fullscreen .stage, .player.pseudo .stage { width: min(100vw, 177.78vh); border-radius: 0; box-shadow: none; }
+.player:fullscreen .controls, .player.pseudo .controls { position: absolute; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: rgba(26, 27, 38, .86); transition: opacity .3s; }
+.player.idle .controls { opacity: 0; }
+.player.idle { cursor: none; }
+.player { display: grid; gap: 10px; }
+
+/* ---------------------------------------------------------------- chapters: a terminal log */
+.lower { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .lower { grid-template-columns: 1fr; } }
+.log { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 8px 12px; }
+.log h2, .about h2 { margin: 0 8px 8px; font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.chapters { list-style: none; margin: 0; padding: 0; display: grid; }
+.chapters button { width: 100%; display: grid; grid-template-columns: 52px 50px 1fr; gap: 10px; align-items: baseline; text-align: left; background: none; border: 0; border-radius: 6px; padding: 7px 8px; color: var(--text); cursor: pointer; font: 14px/1.4 var(--body); }
+.chapters button:hover { background: #22233a; }
+.chapters .ft { font: 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chapters .ck { font: 13px var(--mono); color: #ff7a5c; font-variant-numeric: tabular-nums; }
+.chapters .en2 { display: block; font: 15px/1.2 var(--hand); color: var(--muted); }
+.chapters li.now button { background: #25263a; box-shadow: inset 3px 0 0 var(--orange); }
+.about { display: grid; gap: 12px; padding: 4px 8px; color: #d8cfbe; }
+.about p { margin: 0; max-width: 62ch; }
+.about .keys { font: 12px/1.9 var(--mono); color: var(--muted); }
+.about kbd { font: 12px var(--mono); color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #1f2030; }
+.about a { color: var(--orange); }
+@media (max-width: 520px) {
+  .controls { grid-template-columns: auto 1fr auto; }
+  .controls .time { grid-column: 1 / -1; order: 5; text-align: center; }
+  .btn.mute { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.5s; } .poster, .controls { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>凌晨三点的 <span class="b">Bug</span></h1>
+    <span class="en">The 3 A.M. Bug</span>
+    <div class="meta">一部完全由代码逐帧绘制的动画短片 · 4 分 56 秒 · 无对白 · 请开声音</div>
+  </header>
+
+  <section class="player" id="player" aria-label="影片播放器">
+    <div class="stage" id="stage">
+      <img class="poster" id="poster" src="media/poster.jpg" alt="深夜，他坐在书桌前，显示器的光照亮房间">
+      <video id="vA" muted playsinline preload="auto" aria-hidden="true"></video>
+      <video id="vB" muted playsinline preload="auto" aria-hidden="true"></video>
+      <div class="spinner" id="spin" hidden></div>
+      <button class="big" id="big" aria-label="播放影片"><span><span class="disc"></span><small>▶ 播放 · 请打开声音</small></span></button>
+    </div>
+    <div class="controls" id="controls">
+      <button class="btn" id="play" aria-label="播放"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
+      <div class="track" id="track" role="slider" tabindex="0" aria-label="进度" aria-valuemin="0" aria-valuemax="296" aria-valuenow="0">
+        <div class="bands" id="bands"></div>
+        <div class="fill" id="fill"></div>
+        <div class="ticks" id="ticks"></div>
+        <div class="head" id="head"><b></b><b></b><b></b><b></b></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <div class="time"><b id="cur">00:00</b> / <span id="dur">04:56</span></div>
+      <button class="btn mute" id="mute" aria-label="静音"><svg viewBox="0 0 24 24" id="muteIcon"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" fill="none"/></svg></button>
+      <button class="btn" id="fs" aria-label="全屏"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg></button>
+    </div>
+  </section>
+
+  <div class="lower">
+    <section class="log" aria-label="章节">
+      <h2>章节 · 片中时间 · 墙上的钟</h2>
+      <ol class="chapters" id="chapters"></ol>
+    </section>
+    <section class="about">
+      <h2>关于这部片子</h2>
+      <p>凌晨两点五十，测试又红了。终端里住着的橙色小方块看不下去，一头跳进了代码里。在代码世界里，每一行是一块平台，缩进是台阶，函数是房间，括号是门。他在外面敲下的每一个命令，都会在里面变成看得见的东西：搜索变成探照灯，日志变成路灯，断点变成闸门，<kbd>Ctrl</kbd>+<kbd>Z</kbd> 让一切倒带。</p>
+      <p>画面、角色、灯光和镜头全部由 Canvas 2D 代码逐帧生成；配乐按段落用代码写成，音效来自 CC0 素材并按动画里的每一次按键、落地和碰撞对齐。与《关闭电脑之后》发生在同一个房间里。</p>
+      <div class="keys"><kbd>空格</kbd> 播放 / 暂停　<kbd>←</kbd> <kbd>→</kbd> 快退 / 快进 5 秒　<kbd>F</kbd> 全屏　<kbd>M</kbd> 静音</div>
+      <p class="keys">源代码、成片与素材出处：<a href="https://github.com/yiggeror/3am-bug" target="_blank" rel="noopener">github.com/yiggeror/3am-bug</a></p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ------------------------------------------------------------ media: silent video parts locked to one soundtrack
+  const MEDIA = {"duration":296,"audio":"media/soundtrack.mp4","parts":[{"src":"media/part1.mp4","t0":0,"t1":58.4167},{"src":"media/part2.mp4","t0":58.4167,"t1":119.5},{"src":"media/part3.mp4","t0":119.5,"t1":178},{"src":"media/part4.mp4","t0":178,"t1":239.5833},{"src":"media/part5.mp4","t0":239.5833,"t1":296}]};
+  const CHAPTERS = [
+    { t: 0, clock: '', zh: '片头', en: 'Title', c: '#2b2d3e' },
+    { t: 6.6, clock: '02:50', zh: '又红了', en: 'Red again', c: '#3b4a78' },
+    { t: 58.4, clock: '02:56', zh: '小方块跳进代码', en: 'Into the code', c: '#6d4fa0' },
+    { t: 82.0, clock: '03:10', zh: '一起抓 bug', en: 'Working together', c: '#5159a8' },
+    { t: 160.0, clock: '04:10', zh: '安静的时刻', en: 'A quiet moment', c: '#3f5673' },
+    { t: 178.0, clock: '04:22', zh: '包围', en: 'Closing in', c: '#8a4a6a' },
+    { t: 218.0, clock: '04:55', zh: '全绿', en: 'All green', c: '#3f8f5a' },
+    { t: 245.0, clock: '05:18', zh: '天亮了', en: 'Dawn', c: '#c9895a' },
+    { t: 281.0, clock: '', zh: '片尾', en: 'Credits', c: '#2b2d3e' },
+  ];
+  const D = MEDIA.duration;
+  const $ = (id) => document.getElementById(id);
+  const player = $('player'), stage = $('stage'), vids = [$('vA'), $('vB')], audio = new Audio();
+  audio.preload = 'auto'; audio.src = MEDIA.audio;
+  const fmt = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  $('dur').textContent = fmt(D);
+
+  // bands, ticks and the chapter list
+  CHAPTERS.forEach((c, i) => {
+    const end = i + 1 < CHAPTERS.length ? CHAPTERS[i + 1].t : D;
+    const b = document.createElement('i'); b.style.width = ((end - c.t) / D * 100) + '%'; b.style.background = c.c; $('bands').appendChild(b);
+    if (i) { const k = document.createElement('i'); k.style.left = (c.t / D * 100) + '%'; $('ticks').appendChild(k); }
+    const li = document.createElement('li');
+    li.innerHTML = `<button type="button"><span class="ft">${fmt(c.t)}</span><span class="ck">${c.clock || '—'}</span><span>${c.zh}<span class="en2">${c.en}</span></span></button>`;
+    li.firstChild.addEventListener('click', () => { seek(c.t + 0.01); play(); stage.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+    $('chapters').appendChild(li);
+  });
+
+  // ------------------------------------------------------------ playback state
+  let playing = false, started = false, waiting = false, active = 0, seekT = 0;
+  const partAt = (t) => { let i = 0; while (i < MEDIA.parts.length - 1 && t >= MEDIA.parts[i].t1) i++; return i; };
+  const load = (v, i) => { if (v.dataset.i !== String(i)) { v.dataset.i = String(i); v.src = MEDIA.parts[i].src; v.load(); } };
+  const now = () => (started ? audio.currentTime : seekT);
+  function show(i, t) {
+    // bring part i to the front (loading it into the other element if needed), keep the next one warm
+    let v = vids.find((x) => x.dataset.i === String(i));
+    if (!v) { v = vids[1 - active]; load(v, i); }
+    const idx = vids.indexOf(v);
+    const want = t - MEDIA.parts[i].t0;
+    if (Math.abs(v.currentTime - want) > 0.25) { try { v.currentTime = want; } catch (e) {} }
+    if (idx !== active || !v.classList.contains('on')) { vids[active].classList.remove('on'); v.classList.add('on'); vids[active].pause(); active = idx; }
+    if (playing && v.paused) v.play().catch(() => {});
+    if (!playing && !v.paused) v.pause();
+    const other = vids[1 - active];
+    if (i + 1 < MEDIA.parts.length && other.dataset.i !== String(i + 1)) load(other, i + 1);
+    return v;
+  }
+  function play() {
+    if (!started) {
+      started = true; stage.classList.add('started');
+      const go = () => { try { audio.currentTime = seekT; } catch (e) {} };
+      if (audio.readyState >= 1) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
+    }
+    playing = true;
+    audio.play().catch(() => {});
+    show(partAt(now()), now());
+    setIcons();
+  }
+  function pause() { playing = false; audio.pause(); vids.forEach((v) => v.pause()); setIcons(); }
+  function seek(t) {
+    t = Math.min(D - 0.05, Math.max(0, t));
+    seekT = t;
+    if (started) { try { audio.currentTime = t; } catch (e) {} }
+    show(partAt(t), t);
+    draw(t);
+  }
+  function setIcons() {
+    $('playIcon').innerHTML = playing ? '<path d="M6 4h4v16H6zm8 0h4v16h-4z"/>' : '<path d="M7 4v16l13-8z"/>';
+    $('play').setAttribute('aria-label', playing ? '暂停' : '播放');
+  }
+  function draw(t) {
+    const k = t / D * 100;
+    $('fill').style.width = k + '%'; $('head').style.left = k + '%';
+    $('cur').textContent = fmt(t);
+    $('track').setAttribute('aria-valuenow', Math.round(t));
+    let c = 0; CHAPTERS.forEach((ch, i) => { if (t >= ch.t) c = i; });
+    [...$('chapters').children].forEach((li, i) => li.classList.toggle('now', i === c));
+  }
+  // the loop: audio is the clock, the pictures follow it
+  function tick() {
+    const t = now();
+    if (started) {
+      const i = partAt(t), v = show(i, t);
+      const want = t - MEDIA.parts[i].t0;
+      if (playing && v.readyState >= 2 && Math.abs(v.currentTime - want) > 0.15) { try { v.currentTime = want; } catch (e) {} }
+      // wait for the picture if it falls behind (keeps sound and picture together)
+      const starving = playing && v.readyState < 3;
+      if (starving && !waiting) { waiting = true; audio.pause(); }
+      if (!starving && waiting) { waiting = false; if (playing) audio.play().catch(() => {}); }
+      $('spin').hidden = !waiting;
+      if (t >= D - 0.06 && playing) { pause(); }
+    }
+    draw(t);
+    requestAnimationFrame(tick);
+  }
+  vids.forEach((v) => v.addEventListener('canplay', () => { if (waiting) tick(); }));
+  audio.addEventListener('ended', pause);
+
+  // ------------------------------------------------------------ controls
+  $('big').addEventListener('click', play);
+  $('play').addEventListener('click', () => (playing ? pause() : play()));
+  stage.addEventListener('click', (e) => { if (started && e.target !== $('big')) playing ? pause() : play(); });
+  $('mute').addEventListener('click', () => { audio.muted = !audio.muted; $('mute').style.opacity = audio.muted ? 0.5 : 1; $('mute').setAttribute('aria-label', audio.muted ? '取消静音' : '静音'); });
+  const tr = $('track');
+  const tAt = (x) => { const r = tr.getBoundingClientRect(); return Math.min(1, Math.max(0, (x - r.left) / r.width)) * D; };
+  let drag = false;
+  tr.addEventListener('pointerdown', (e) => { drag = true; tr.setPointerCapture(e.pointerId); seek(tAt(e.clientX)); });
+  tr.addEventListener('pointermove', (e) => {
+    const t = tAt(e.clientX), tip = $('tip');
+    let c = CHAPTERS[0]; CHAPTERS.forEach((ch) => { if (t >= ch.t) c = ch; });
+    tip.textContent = `${fmt(t)} · ${c.zh}`; tip.style.left = (t / D * 100) + '%'; tip.hidden = false;
+    if (drag) seek(t);
+  });
+  tr.addEventListener('pointerup', () => { drag = false; });
+  tr.addEventListener('pointerleave', () => { $('tip').hidden = true; });
+  tr.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { seek(now() - 5); e.preventDefault(); } if (e.key === 'ArrowRight') { seek(now() + 5); e.preventDefault(); } });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    if (e.key === ' ' || e.key === 'k') { e.preventDefault(); playing ? pause() : play(); }
+    else if (e.key === 'ArrowLeft' && e.target !== tr) seek(now() - 5);
+    else if (e.key === 'ArrowRight' && e.target !== tr) seek(now() + 5);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+    else if (e.key === 'm' || e.key === 'M') $('mute').click();
+  });
+  // fullscreen: the real thing where the browser allows it, otherwise fill the window (phones)
+  function toggleFs() {
+    const inFs = document.fullscreenElement || document.webkitFullscreenElement || player.classList.contains('pseudo');
+    if (inFs) {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+      player.classList.remove('pseudo');
+      return;
+    }
+    const req = player.requestFullscreen || player.webkitRequestFullscreen;
+    if (req) Promise.resolve(req.call(player)).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => player.classList.add('pseudo'));
+    else player.classList.add('pseudo');
+  }
+  $('fs').addEventListener('click', toggleFs);
+  let idleT = 0;
+  const wake = () => { player.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if (playing && (document.fullscreenElement || player.classList.contains('pseudo'))) player.classList.add('idle'); }, 2500); };
+  ['pointermove', 'pointerdown', 'keydown'].forEach((ev) => player.addEventListener(ev, wake));
+
+  load(vids[0], 0); vids[0].classList.add('on');
+  if (MEDIA.parts.length > 1) load(vids[1], 1);
+  draw(0);
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>
