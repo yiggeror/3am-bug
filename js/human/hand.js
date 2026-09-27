@@ -18,7 +18,7 @@ function fingerPts(base, ang, len, curl, k1 = 0.55, k2 = 1.0) {
 
 export function drawHand(fig, M, D, hp0, z, name = 'hand', o = {}) {
   const hp = { ...HAND_DEFAULT, ...hp0 };
-  const X = (pts) => apAll(M, pts);
+  const X = typeof M === 'function' ? M : (pts) => apAll(M, pts);
   const skin = o.skin || D.skin;
   const mitten = D.hands === 'mitten';
   const add = (n, pts, zz, opt = {}) => fig.add(name + n, X(pts), { fill: skin, z: zz, per: 3, ...opt });

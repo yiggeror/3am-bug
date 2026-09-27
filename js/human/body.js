@@ -69,7 +69,8 @@ function torsoFB(P, D) {
 function armGeom(S, A, D, o = {}) {
   const up = D.upper * (A.us ?? 1), fo = D.fore * (A.fs ?? 1);
   const W = A.hand;
-  const E = A.elbow || ik(S, W, up, fo, A.bend ?? 1).joint;
+  let E = A.elbow || ik(S, W, up, fo, A.bend ?? 1).joint;
+  if (A.elbowTo && A.elbowK > 0) E = lerpP(E, A.elbowTo, Math.min(1, A.elbowK));
   const sw = D.sleeve * (A.w ?? 1);
   const persp = A.persp ?? 1; // forearm closer to the camera looks wider
   const t = tube([S, lerpP(S, E, 0.5), E, lerpP(E, W, 0.55), W], [[0, sw * 1.08], [0.42, sw * 0.95], [0.8, sw * 0.86 * persp], [1, sw * 0.8 * persp]], { capStart: 'round', capStartK: 0.6, capEnd: 'flat', step: 0.9 });
@@ -176,11 +177,12 @@ export function drawFront(ctx, P0, D, o = {}) {
     addArm(fig, nm, S, { ...A, flipHand: side > 0 ? !A.flipHand : !!A.flipHand }, D, z);
   }
   if (o.extra) o.extra(fig, tor);
+  if (o.lights) for (const L of o.lights) fig.edgeLight(L);
   fig.draw();
   return { tor, fig };
 }
 function defaultFrontArm(side, D) {
-  return { hand: [side * 10.5, -23], bend: side > 0 ? 1 : -1, fs: 0.46, persp: 1.12, hp: { view: 'front', rot: 0, scale: 1.12 } };
+  return { hand: [side * 10, -19.6], bend: side > 0 ? 1 : -1, fs: 0.5, persp: 1.14, hp: { view: 'front', rot: 0, scale: 1.16 } };
 }
 
 // ================================================================== BACK
@@ -223,6 +225,7 @@ export function drawBack(ctx, P0, D, o = {}) {
     addArm(fig, nm, S, { ...A, flipHand: side > 0 ? !A.flipHand : !!A.flipHand }, D, z, { edge: z < 0 ? false : true });
   }
   if (o.extra) o.extra(fig, tor);
+  if (o.lights) for (const L of o.lights) fig.edgeLight(L);
   fig.draw();
   return { tor, fig };
 }
@@ -232,15 +235,38 @@ function defaultBackArm(side, D, tor) {
 }
 
 // ================================================================== SIDE (facing +x)
-function deformSide(p, P, D, pivot = [0, -3]) {
-  let [x, y] = p;
-  const T = D.torsoH;
-  const h = clamp((pivot[1] - y) / T);
-  y = pivot[1] + (y - pivot[1]) * (1 - 0.06 * P.slump) * P.sy;
-  x += P.breath * 0.35 * Math.sin(Math.PI * h) * (x > 0 ? 1 : 0);
-  const a = P.bend + P.slump * 0.6 * Math.pow(h, 1.6) + P.lean * h;
-  const r = rotP([x, y], a, pivot[0], pivot[1]);
-  return [r[0] + P.hipX, r[1] + P.hipY];
+// Side view: the torso bends along a curved spine. Hips stay planted on the seat; the angle grows
+// toward the shoulders (bend), and the upper back rounds when slumping. Points are carried by the
+// spine's frame, so the front compresses and the back stretches like a soft tube.
+const SPINE0 = -3, SPINE_L = 47;
+function spineFrame(P, s) {
+  // integrate the spine curve up to parameter s (0 hips .. 1 neck)
+  const ang = (u) => P.bend * (0.4 + 0.6 * u) + P.slump * 0.85 * Math.pow(u, 1.6) + P.lean * u;
+  const n = 12;
+  let x = 0, y = SPINE0;
+  const L = SPINE_L * (1 - 0.05 * P.slump) * P.sy;
+  const ss = clamp(s, 0, 1.15);
+  for (let i = 0; i < n; i++) {
+    const u = (i + 0.5) / n * ss;
+    const a = ang(u);
+    x += Math.sin(a) * L * ss / n;
+    y -= Math.cos(a) * L * ss / n;
+  }
+  return { x, y, a: ang(ss) };
+}
+function deformSide(p, P, D) {
+  const [px, py] = p;
+  const s = (SPINE0 - py) / SPINE_L;
+  let out;
+  if (s <= 0) out = [px, py];
+  else {
+    const f = spineFrame(P, s);
+    const nx = px + (px > 0 ? P.breath * 0.35 * Math.sin(Math.PI * clamp(s)) : 0);
+    // belly squeezes a little when folding forward
+    const squeeze = px > 0 && s < 0.6 ? 1 - clamp(P.bend, 0, 1) * 0.12 : 1;
+    out = [f.x + Math.cos(f.a) * nx * squeeze, f.y + Math.sin(f.a) * nx * squeeze];
+  }
+  return [out[0] + P.hipX, out[1] + P.hipY];
 }
 export function drawSide(ctx, P0, D, o = {}) {
   const P = pose(P0);
@@ -252,11 +278,11 @@ export function drawSide(ctx, P0, D, o = {}) {
   const legs = P.legs;
   for (const far of [true, false]) {
     const off = far ? [2.2, -1.4] : [0, 0];
-    const kx = 36 + (legs.knee || 0) * (far ? 0.7 : 1);
+    const kx = 34 + (legs.knee || 0) * (far ? 0.7 : 1);
     const hip = [3 + off[0] + P.hipX * 0.3, -6 + off[1]];
     const knee = [kx + off[0], -7.5 + off[1]];
     const ankle = [kx + 1 - (legs.foot || 0) * 10 + off[0] + (far ? -3 : 0), 40.5 + off[1]];
-    const leg = tube([hip, lerpP(hip, knee, 0.5), knee, lerpP(knee, ankle, 0.5), ankle], [[0, 7.6], [0.42, 6.6], [0.5, 6.4], [1, 4.8]], { capStart: 'round', capEnd: 'flat', step: 1 });
+    const leg = tube([hip, lerpP(hip, knee, 0.5), knee, lerpP(knee, ankle, 0.5), ankle], [[0, 7.0], [0.42, 5.9], [0.5, 5.7], [1, 4.4]], { capStart: 'round', capEnd: 'flat', step: 1 });
     fig.add(far ? 'legF' : 'legN', leg.outline, { fill: far ? D.pantsShade : D.pants, z: far ? -12 : 2, edge: far ? false : true, per: 2 });
     const a = ankle;
     const sock = [[a[0] - 4.6, a[1] - 2], [a[0] + 2.5, a[1] - 1.6], [a[0] + 9, a[1] + 1.8], [a[0] + 12.8, a[1] + 4.6], [a[0] + 12, a[1] + 6.6], [a[0] - 3.4, a[1] + 6.8], [a[0] - 5.2, a[1] + 3]];
@@ -291,11 +317,11 @@ export function drawSide(ctx, P0, D, o = {}) {
   }
   // neck + head
   const N = d([0.2, -50]);
-  const upAng = P.bend + P.slump * 0.6 + P.lean;
-  const ndir = -Math.PI / 2 + upAng * 0.9 + (P.head.nod || 0) * 0.25;
+  const upAng = spineFrame(P, 1).a;
+  const ndir = -Math.PI / 2 + upAng * 0.95 + (P.head.nod || 0) * 0.3;
   const NT = [N[0] + Math.cos(ndir) * 4.6 + (P.head.dx || 0), N[1] + Math.sin(ndir) * 4.6 + (P.head.dy || 0)];
   fig.add('neck', tube([[N[0] - 0.4, N[1] + 2.5], NT], [[0, 3.7], [1, 3.4]], { capEnd: 'flat', capStart: 'flat' }).outline, { fill: D.skin, z: 1.5 });
-  const hang = upAng * 0.55 + (P.head.tilt || 0) + (P.head.nod || 0) * 0.45;
+  const hang = upAng * 0.75 + (P.head.tilt || 0) + (P.head.nod || 0) * 0.6;
   const M = headMatrix(NT, hang, D, 1, [-1.6, 9.2]);
   headSide(fig, M, D, P.head, P.face, P.hair, 10, ups * D.headScale);
   // arms: far (behind the body, darker), near (in front)
@@ -307,6 +333,7 @@ export function drawSide(ctx, P0, D, o = {}) {
   if (o.desk) o.desk(fig, 15);
   addArm(fig, 'armN', S, armN, D, armN.z === 'back' ? -8 : 20);
   if (o.extra) o.extra(fig, { d, S, N });
+  if (o.lights) for (const L of o.lights) fig.edgeLight(L);
   fig.draw();
   return { fig };
 }

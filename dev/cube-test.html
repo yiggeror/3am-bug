@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Patrick Hand";src:url(../fonts/PatrickHand-Regular.ttf)}body{margin:0;background:#222}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+import { drawCube2 } from '../js/cube2.js';
+import { setBoil, text } from '../js/draw.js';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+window.render = () => {
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = '#f6f0e4'; ctx.fillRect(0,0,1920,1080); setBoil(0);
+  const L = [
+    ['normal', {}], ['happy', { eyes: 'happy', emote: { type: 'burst', k: 1, dx: 0 } }], ['surprised', { eyes: 'wide', emote: { type: '!', k: 1, dx: 0 } }],
+    ['confused', { eyeL: 0.7, lookX: 0.4, rot: 0.08, emote: { type: '?', k: 1, dx: 0.1 } }], ['angry', { eyes: 'squeeze', emote: { type: 'puff', k: 1, dx: 0.3 }, armL: { a: -0.4 }, armR: { a: -0.4 } }], ['shy', { eyes: 'flat', blush: 1, rot: -0.06 }],
+    ['squash', { sq: 0.4, armL: { a: -0.5 }, armR: { a: -0.5 } }], ['stretch', { sq: -0.3, armL: { a: 1.2 }, armR: { a: 1.2 } }], ['bend+jump', { sq: -0.15, bend: 0.5, rot: -0.2, legSpread: 1, armL: { a: 1.4 }, armR: { a: 0.9 } }],
+    ['brake', { lean: -0.35, rot: -0.15, bend: -0.4, legs: [{ fx: 0.08 }, { fx: 0.1 }, { fx: 0.08 }, { fx: 0.1 }], eyes: 'wide', armL: { a: 1.0 }, armR: { a: 1.3 } }], ['dizzy', { eyes: 'dizzy', sq: 0.2, rot: 0.1, mouth: 'wave' }], ['pounce', { sx: 1.35, sy: 0.75, rot: -0.1, bend: 0.3, armL: { a: 0.1, len: 1.3 }, armR: { a: 0.2, len: 1.3 }, eyes: 'squeeze' }],
+  ];
+  L.forEach(([name, o], i) => {
+    const x = 180 + (i % 6) * 310, y = 360 + Math.floor(i / 6) * 450;
+    drawCube2(ctx, { x, y, size: 190, ...o });
+    text(ctx, name, x, y + 60, { size: 34, still: true });
+  });
+};
+window.__ready = true;
+</script></body></html>

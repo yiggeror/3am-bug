@@ -44,6 +44,10 @@ export class Fig {
   shade(fn, clip = 'all', z = 1e9) { this.ops.push({ type: 'shade', fn, clip, z, idx: this.n++ }); }
   // arbitrary drawing at depth z (optional clip)
   after(fn, z = 1e9, clip = null) { this.ops.push({ type: 'fn', fn, clip, z, idx: this.n++ }); }
+  // cel light on the silhouette: a crescent on the side the light comes from.
+  // o: { rgb, a, v: [dx, dy] screen px toward the light (several allowed via vs), mode: 'lighter' | 'multiply' | 'source-over',
+  //      blur (px), only: [names] | null, exclude: [names] }
+  edgeLight(o) { (this.lights ||= []).push(o); }
 
   _prep() {
     const ctx = this.ctx, s = curScale(ctx);
@@ -150,7 +154,60 @@ export class Fig {
       }
     }
     ctx.restore();
+    if (this.lights) for (const L of this.lights) this._edgeLight(L);
   }
+  _edgeLight(L) {
+    const ctx = this.ctx, cv = ctx.canvas;
+    const W = cv.width, H = cv.height;
+    const acc = offscreen(0, W, H), tmp = offscreen(1, W, H);
+    const ac = acc.getContext('2d'), tc = tmp.getContext('2d');
+    ac.setTransform(1, 0, 0, 1, 0, 0); ac.globalCompositeOperation = 'source-over'; ac.globalAlpha = 1; ac.filter = 'none'; ac.clearRect(0, 0, W, H);
+    const m = ctx.getTransform();
+    const parts = this.parts.filter((p) => (!L.only || L.only.includes(p.name)) && !(L.exclude && L.exclude.includes(p.name)) && !p.o.noLight);
+    const fillAll = (c, dx, dy) => {
+      c.setTransform(new DOMMatrix([1, 0, 0, 1, dx, dy]).multiply(m));
+      for (const p of parts) c.fill(p.path);
+    };
+    const vs = L.vs || [L.v];
+    const k = cv.width / 1920;
+    for (const v of vs) {
+      tc.setTransform(1, 0, 0, 1, 0, 0); tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, W, H);
+      tc.fillStyle = '#fff';
+      fillAll(tc, 0, 0);
+      tc.globalCompositeOperation = 'destination-out';
+      fillAll(tc, -v[0] * k, -v[1] * k);
+      ac.setTransform(1, 0, 0, 1, 0, 0);
+      ac.globalCompositeOperation = 'lighter';
+      ac.drawImage(tmp, 0, 0);
+    }
+    // colourise, keep inside the silhouette
+    ac.setTransform(1, 0, 0, 1, 0, 0);
+    ac.globalCompositeOperation = 'source-in';
+    ac.fillStyle = `rgb(${L.rgb})`;
+    ac.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = L.mode || 'lighter';
+    ctx.globalAlpha = L.a ?? 0.8;
+    if (L.blur) ctx.filter = `blur(${L.blur * k}px)`;
+    if (L.blur) {
+      // blur can bleed outside: clip to the silhouette
+      ctx.setTransform(m);
+      const clip = new Path2D();
+      for (const p of parts) clip.addPath(p.path);
+      ctx.clip(clip);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    ctx.drawImage(acc, 0, 0);
+    ctx.restore();
+  }
+}
+const OFF = [];
+function offscreen(i, w, h) {
+  let c = OFF[i];
+  if (!c) c = OFF[i] = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  return c;
 }
 // edge lines fade in from the root (first point) so a sleeve grows out of the shoulder without a seam
 export const EDGE_IN = (u) => Math.min(1, Math.max(0, (u - 0.05) / 0.3)) * (u > 0.93 ? Math.max(0.35, (1 - u) / 0.07) : 1);

@@ -354,7 +354,7 @@ export function ik(root, target, l1, l2, bend = 1) {
 // ---------------------------------------------------------------- text
 export const HAND_FONT = '"Patrick Hand", "ZCOOL KuaiLe", sans-serif';
 export const ZH_FONT = '"ZCOOL KuaiLe", "Patrick Hand", sans-serif';
-export const MONO_FONT = '"JetBrains Mono", "DejaVu Sans Mono", monospace';
+export const MONO_FONT = '"JetBrains Mono", "ZCOOL KuaiLe", monospace';
 export function text(ctx, str, x, y, o = {}) {
   ctx.save();
   ctx.font = `${o.weight || 400} ${o.size || 32}px ${o.font || HAND_FONT}`;

@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Patrick Hand";src:url(../fonts/PatrickHand-Regular.ttf)}
+@font-face{font-family:"ZCOOL KuaiLe";src:url(../fonts/ZCOOLKuaiLe-Regular.ttf)}
+@font-face{font-family:"JetBrains Mono";src:url(../fonts/JetBrainsMonoNL-Regular.ttf)}
+body{margin:0;background:#222}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+import { DESIGNS } from '../js/human/design.js';
+import { drawSideSet } from '../js/sets/side.js';
+import { drawFrontSet } from '../js/sets/front.js';
+import { drawBackSet } from '../js/sets/back.js';
+import { drawKeysSet, typingState } from '../js/sets/keys.js';
+import { Cam } from '../js/world.js';
+import { CODE, TEST_FAIL } from '../js/screen.js';
+import { cube } from '../js/cube.js';
+import { setBoil } from '../js/draw.js';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const D = DESIGNS.A;
+window.render = (arg) => {
+  const a = JSON.parse(arg || '{}');
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = '#000'; ctx.fillRect(0,0,1920,1080);
+  setBoil(a.t || 0);
+  const S = { t: 0, tod: 0, lamp: 1, screen: 1, cups: 3, ...(a.S || {}), human: { P: a.P || {}, D, lights: a.lights } };
+  S.scr = { editor: { code: CODE, cursor: { line: 7, col: 22 }, errLine: 7 }, term: { lines: TEST_FAIL, cube: cube({ x: 1720, y: 1004, size: 64, lookX: -0.7, eyes: 'normal', brows: 0.6 }) } };
+  if (a.set === 'keys') {
+    const ev = [[0.0, 'i'], [0.12, 't'], [0.22, 'e'], [0.34, 'm'], [0.6, '?'], [0.75, '.'], [0.9, 'p'], [1.5, '\n']];
+    const st = typingState(ev, a.tt ?? 0.36);
+    drawKeysSet(ctx, { ...S, ...st, D, lights: a.lights }, new Cam(a.cam || { x: 0, y: 112, z: -38, f: 2000, hy: -870 }));
+    return;
+  }
+  if (a.set === 'back') drawBackSet(ctx, S, new Cam(a.cam || { x: 45, y: 150, z: -250, f: 1150, hy: 360 }));
+  else if (a.set === 'front') drawFrontSet(ctx, S, a.cam || { x: 0, y: -52, zoom: 12 });
+  else drawSideSet(ctx, S, a.cam || { x: 25, y: -40, zoom: 7.5 });
+};
+await Promise.all([document.fonts.load('40px "Patrick Hand"'), document.fonts.load('20px "JetBrains Mono"')]);
+window.__ready = true;
+</script></body></html>

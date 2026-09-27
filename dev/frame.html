@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Patrick Hand";src:url(../fonts/PatrickHand-Regular.ttf)}
+@font-face{font-family:"ZCOOL KuaiLe";src:url(../fonts/ZCOOLKuaiLe-Regular.ttf)}
+@font-face{font-family:"JetBrains Mono";src:url(../fonts/JetBrainsMonoNL-Regular.ttf)}
+@font-face{font-family:"JetBrains Mono";font-weight:bold;src:url(../fonts/JetBrainsMonoNL-Bold.ttf)}
+body{margin:0;background:#111}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+const mod = await import(new URLSearchParams(location.search).get('film') || '../js/reel.js');
+const { renderFrame, DURATION, shotAt } = mod;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+window.render = (t) => { renderFrame(ctx, parseFloat(t)); };
+window.renderRaw = (t) => { renderFrame(ctx, t); };
+window.DURATION = DURATION;
+window.shotName = (t) => shotAt(t).name;
+await Promise.all([document.fonts.load('40px "Patrick Hand"'), document.fonts.load('40px "ZCOOL KuaiLe"', '动作测试'), document.fonts.load('20px "JetBrains Mono"'), document.fonts.load('bold 20px "JetBrains Mono"')]);
+window.__ready = true;
+</script></body></html>

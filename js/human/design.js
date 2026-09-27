@@ -11,7 +11,7 @@ export const DESIGNS = {
     pants: '#4d4b57', pantsShade: '#3e3c47', socks: '#efe6d6', socksShade: '#d3c8b4',
     skin: '#f7dcc5', skinShade: '#e9bf9f', blush: '#f2a08f', hair: '#3a2a23', hairHi: '#5e473b', lip: '#b8624f',
     headScale: 1.1, hairStyle: 'fluffy', glasses: false, hat: null, eyes: 'oval', face: 'oval', hands: 'four',
-    shW: 16.5, chestW: 18.2, hemW: 17.4, torsoH: 50, upper: 25, fore: 24, sleeve: 5.4,
+    shW: 16.5, chestW: 18.2, hemW: 17.4, torsoH: 50, upper: 22.5, fore: 22, sleeve: 5.4,
   },
   B: {
     id: 'B',
