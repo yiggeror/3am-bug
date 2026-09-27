@@ -140,7 +140,7 @@ export function drawFindBar(ctx, t) {
 }
 
 // ------------------------------------------------------------------ the error rain (and its rewind)
-const BLOCKS = [
+export const BLOCKS = [
   { x: charCX(12), line: 20, txt: 'SyntaxError', t: 135.0, w: 300 },
   { x: charCX(24), line: 22, txt: "'}' expected", t: 135.25, w: 290 },
   { x: charCX(19), line: 20, txt: 'Unexpected end of input', t: 136.25, w: 520, hitsCube: true },

@@ -2,7 +2,7 @@
 // on the terminal's prompt line, and — while it is inside the code — tiny versions of the little friend and
 // the bug running through the editor at exactly their code-world positions.
 import { drawScreen, TERM, SCR } from '../screen.js';
-import { editorState, terminalState, TYPE, LOG_AT } from './code.js';
+import { editorState, terminalState, TYPE, LOG_AT, MSG } from './code.js';
 import { cubeCW, bugCW, inCodeWorld } from './cw.js';
 import { LINES, CW } from '../codeworld.js';
 import { drawCube2 } from '../cube2.js';
@@ -86,7 +86,8 @@ export function cubeTerm(t) {
     S.lookX = K(d, [[1.6, 0.6], [1.9, 0.1], [2.2, -0.3]]); S.lookY = K(d, [[1.6, 0], [1.9, -1], [3.4, -1], [3.6, 0.6]]);
     S.eyes = d > 1.9 && d < 3.4 ? 'happy' : 'normal';
     // typing: a little hop per character
-    if (d > 3.6 && d < 8.0) { const ph = ((d - 3.6) * 2.6) % 1; S.sq = ph < 0.25 ? 0.12 : 0; S.y -= ph > 0.25 && ph < 0.7 ? 10 : 0; S.lookY = 0.7; S.armR = { a: ph < 0.3 ? -0.5 : 0.2 }; }
+    const typeEnd = 3.6 + MSG.text.length / MSG.rate;
+    if (d > 3.6 && d < typeEnd) { const ph = ((d - 3.6) * MSG.rate) % 1; S.sq = ph < 0.25 ? 0.12 : 0; S.y -= ph > 0.25 && ph < 0.7 ? 10 : 0; S.lookY = 0.7; S.armR = { a: ph < 0.3 ? -0.5 : 0.2 }; }
     // settles down on top of its message like a loaf, legs tucked in, and dozes off
     if (d > 8.4) {
       const s2 = ease.inOut(clamp((d - 8.4) / 1.2));

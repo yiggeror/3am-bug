@@ -18,7 +18,7 @@ const g = (i) => LINES[i].ground;
 const kk = (t, a, b, e = 'inOut') => ease[e](clamp((t - a) / (b - a)));
 
 // ================================================================== KEYS: npm test … the finger hovers … Enter
-const EV = [];
+export const EV = [];
 { let t = TYPE.finalType; for (const ch of 'npm test') { EV.push([t, ch]); t += 0.1; } EV.push([TYPE.finalEnter, '\n']); }
 const keysEnter = keysShot('keys-enter', T.enter, T.green, (tc) => {
   const lift = (tt, h) => K(tt, [[218.0, 0.4], [218.1, 0.1], [218.9, 0.1], [219.3, h > 0 ? 1.6 : 0.5, 'out'], [220.2, h > 0 ? 1.7 : 0.5], [220.55, h > 0 ? 2.6 : 0.6, 'out'], [TYPE.finalEnter, h > 0 ? -0.35 : 0.5, 'in'], [221.0, 0.2]]);

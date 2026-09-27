@@ -106,6 +106,8 @@ const PASS_LOG = [
   ['cmd', '$ npm test'], ['', ''], ['plain', '  console.log'], ['say', '    here'], ['say', '    here'], ['say', '    here'], ['', ''],
   ...TEST_PASS.slice(2),
 ];
+// the little friend types one character per hop (see cubeTerm)
+export const MSG = { text: '辛苦了，晚安 :)', t0: T.goodnight + 0.2 + 3.6, rate: 2.2 };
 export function terminalState(t) {
   const st = { lines: [], shown: 0, input: '', scroll: 0 };
   // an older failure is on screen when the film begins
@@ -125,9 +127,8 @@ export function terminalState(t) {
     else { st.lines = PASS_LOG; st.shown = clamp((t - T.green) / 4.5) * PASS_LOG.length; }
   }
   // the little friend's message at the end
-  if (t >= T.goodnight + 2.0) {
-    const msg = '辛苦了，晚安 :)';
-    st.input = msg.slice(0, Math.floor(clamp((t - T.goodnight - 2.0) / 4.2) * msg.length + 0.001));
+  if (t >= MSG.t0) {
+    st.input = MSG.text.slice(0, Math.min(MSG.text.length, Math.floor((t - MSG.t0) * MSG.rate) + 1));
     st.inputColor = '#f39a62';
   }
   if (st.lines.length > 20) st.scroll = Math.max(0, Math.min(st.shown, st.lines.length) - 20);

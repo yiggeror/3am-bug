@@ -103,7 +103,7 @@ function ots1(t0, t1) {
 }
 
 // ------------------------------------------------------------------ KEYS: undo the ?. edit, npm test, a hard Enter
-const EV1 = [];
+export const EV1 = [];
 {
   let t = TYPE.run2Type;
   for (const ch of 'npm test') { EV1.push([t, ch]); t += 0.1; }

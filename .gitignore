@@ -2,3 +2,4 @@ node_modules/
 production/build/
 __pycache__/
 *.log
+production/sfx_candidates/

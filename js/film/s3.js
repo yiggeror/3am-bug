@@ -139,7 +139,7 @@ function take(t0, t1) {
 }
 
 // ================================================================== D · KEYS: Ctrl+F "total"
-const EV_F = [];
+export const EV_F = [];
 { let t = T.search + 1.2; for (const ch of 'total') { EV_F.push([t, ch]); t += 0.2; } }
 const keysFind = keysShot('keys-find', T.search, 100.4, (tc) => {
   const st = typingState(EV_F, tc, { lift: (tt, h) => K(tt, [[98.0, 0.9], [98.3, 0.2], [100.2, 0.1], [100.4, 0.6]]) });

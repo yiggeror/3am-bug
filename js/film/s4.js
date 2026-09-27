@@ -88,7 +88,7 @@ const gate2 = shot(186.45, 189.0, 'cw-gate2', (ctx, t) => {
 }, { dissolve: 0 });
 
 // ================================================================== KEYS: Ctrl+F  items[i]
-const EV_PIN = [];
+export const EV_PIN = [];
 { let t = PIN_TYPE; for (const ch of 'items[i]') { EV_PIN.push([t, ch]); t += 0.09; } }
 const keysPin = keysShot('keys-pin', T.pin, 190.0, (tc) => {
   const st = typingState(EV_PIN, tc, { lift: (tt) => K(tt, [[189.0, 0.8], [189.2, 0.1]]) });
