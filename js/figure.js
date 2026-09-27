@@ -163,13 +163,30 @@ export class Fig {
     const ac = acc.getContext('2d'), tc = tmp.getContext('2d');
     ac.setTransform(1, 0, 0, 1, 0, 0); ac.globalCompositeOperation = 'source-over'; ac.globalAlpha = 1; ac.filter = 'none'; ac.clearRect(0, 0, W, H);
     const m = ctx.getTransform();
-    const parts = this.parts.filter((p) => (!L.only || L.only.includes(p.name)) && !(L.exclude && L.exclude.includes(p.name)) && !p.o.noLight);
+    const lit = (p) => (!L.only || L.only.includes(p.name)) && !(L.exclude && L.exclude.includes(p.name)) && !p.o.noLight;
+    const parts = this.parts.filter(lit);
+    const order = this.parts.slice().sort((a, b) => a.z - b.z || a.idx - b.idx);
+    const occludes = order.some((p) => p.o.noLight && p.path);
+    const k = cv.width / 1920;
+    const vs = L.vs || [L.v];
+    // the visible lit silhouette: lit parts paint it in draw order, unlit parts in front of them (a desk,
+    // a keyboard) erase it — so the rim light never shows through something that covers the figure
+    let vis = null;
+    if (occludes) {
+      vis = offscreen(2, W, H);
+      const vc = vis.getContext('2d');
+      vc.setTransform(1, 0, 0, 1, 0, 0); vc.globalCompositeOperation = 'source-over'; vc.clearRect(0, 0, W, H);
+      vc.setTransform(m); vc.fillStyle = '#fff';
+      for (const p of order) {
+        if (lit(p)) { vc.globalCompositeOperation = 'source-over'; vc.fill(p.path); }
+        else if (p.o.noLight && p.path) { vc.globalCompositeOperation = 'destination-out'; vc.fill(p.path); }
+      }
+    }
     const fillAll = (c, dx, dy) => {
+      if (vis) { c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(vis, dx, dy); return; }
       c.setTransform(new DOMMatrix([1, 0, 0, 1, dx, dy]).multiply(m));
       for (const p of parts) c.fill(p.path);
     };
-    const vs = L.vs || [L.v];
-    const k = cv.width / 1920;
     for (const v of vs) {
       tc.setTransform(1, 0, 0, 1, 0, 0); tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, W, H);
       tc.fillStyle = '#fff';
