@@ -357,12 +357,14 @@ export const ZH_FONT = '"ZCOOL KuaiLe", "Patrick Hand", sans-serif';
 export const MONO_FONT = '"JetBrains Mono", "ZCOOL KuaiLe", monospace';
 export function text(ctx, str, x, y, o = {}) {
   ctx.save();
-  ctx.font = `${o.weight || 400} ${o.size || 32}px ${o.font || HAND_FONT}`;
+  // canvas rounds tiny font sizes badly (text in centimetre units): draw it large and scale down
+  const sz = o.size || 32, m = sz < 8 ? 16 / sz : 1;
+  ctx.font = `${o.weight || 400} ${sz * m}px ${o.font || HAND_FONT}`;
   ctx.textAlign = o.align || 'center';
   ctx.textBaseline = o.baseline || 'middle';
   ctx.fillStyle = o.color || INK;
   if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
-  if (o.rot) { ctx.translate(x, y); ctx.rotate(o.rot); x = 0; y = 0; }
+  if (o.rot || m !== 1) { ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); ctx.scale(1 / m, 1 / m); x = 0; y = 0; }
   const j = o.still ? 0 : (noise1(BOIL * 0.7, (o.seed || 3)) * 0.6) / curScale(ctx);
   if (o.stroke) { ctx.lineWidth = o.stroke; ctx.strokeStyle = o.strokeColor || INK; ctx.lineJoin = 'round'; ctx.strokeText(str, x + j, y - j); }
   ctx.fillText(str, x + j, y - j);

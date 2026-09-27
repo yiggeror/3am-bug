@@ -109,7 +109,7 @@ export function drawBug(ctx, st) {
     g.add('ring', ring, { fill: s.glyphColor, z: 0 });
     g.add('hole', ellipsePts(0, -0.34, 0.16, 0.19, 18), { fill: s.holeColor || '#232536', z: 0.5, edge: true, noOutline: true });
     const peek = s.peek ?? 0.5;
-    if (peek > 0.05) for (const i of [-1, 1]) g.line(ellipsePts(i * 0.07 + s.lookX * 0.04, -0.36, 0.035, 0.04 * peek, 8), { z: 1, fill: '#fffaf0', lw: lw * 0.3 });
+    if (peek > 0.05) for (const i of [-1, 1]) { g.line(ellipsePts(i * 0.075 + s.lookX * 0.04, -0.37, 0.05, 0.06 * peek, 10), { z: 1, fill: '#fffaf0', lw: lw * 0.35 }); g.line(ellipsePts(i * 0.075 + s.lookX * 0.06, -0.365, 0.022, 0.03 * peek, 8), { z: 1.1, fill: '#140f18', stroke: false }); }
     g.draw();
     ctx.restore();
   } else if (dk > 0.02) {

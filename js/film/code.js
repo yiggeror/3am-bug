@@ -3,7 +3,7 @@
 // editor when they are inside the code.
 import { CODE, TEST_FAIL, TEST_PASS } from '../screen.js';
 import { T } from './times.js';
-import { clamp, lerp } from '../core.js';
+import { clamp, lerp, hash2 } from '../core.js';
 
 // ------------------------------------------------------------------ editor text over time
 const clone = (code) => code.map((l) => l.map(([k, s]) => [k, s]));
@@ -29,6 +29,8 @@ export const TYPE = {
   logStart: 114.4, logEnd: 116.8,
   // holding backspace too long: deletes the tail of "      });" (editor row 22 after the insert)
   bsStart: 131.4, bsEnd: 134.6,
+  run2Type: 21.7,                 // second run, typed in the keyboard close-up
+  finalType: T.enter + 0.1, finalEnter: T.green - 0.25,
   undo: T.undo + 0.2,
   fix: T.caught + 0.1,
 };
@@ -100,7 +102,7 @@ export function terminalState(t) {
   const st = { lines: [], shown: 0, input: '', scroll: 0 };
   // an older failure is on screen when the film begins
   if (t < T.run1) { st.lines = TEST_FAIL; st.shown = TEST_FAIL.length; st.input = t > T.run1 - 1.0 ? 'npm test'.slice(0, Math.floor((t - (T.run1 - 1.0)) / 0.1)) : ''; }
-  else if (t < T.run2) { st.lines = FAIL_NAN; st.shown = clamp((t - T.run1 - 0.9) / 0.7) * FAIL_NAN.length; }
+  else if (t < T.run2) { st.lines = FAIL_NAN; st.shown = clamp((t - T.run1 - 0.9) / 0.7) * FAIL_NAN.length; if (t >= TYPE.run2Type) st.input = 'npm test'.slice(0, Math.floor((t - TYPE.run2Type) / 0.1) + 1); }
   else { st.lines = TEST_FAIL; st.shown = clamp((t - T.run2 - 0.4) / 0.6) * TEST_FAIL.length; }
   // his forehead on the keyboard
   if (t >= T.headDown && t < T.situp + 1.0) {
@@ -110,8 +112,8 @@ export function terminalState(t) {
   if (t >= T.situp + 1.0 && t < T.enter) { st.input = ''; }
   // the final run
   if (t >= T.enter) {
-    const typed = 'npm test'.slice(0, Math.floor(clamp((t - T.enter + 0.2) / 0.9) * 8));
-    if (t < T.enter + 1.0) { st.input = typed; st.lines = TEST_FAIL; st.shown = TEST_FAIL.length; }
+    const typed = 'npm test'.slice(0, Math.floor(clamp((t - TYPE.finalType) / 0.8) * 8.99));
+    if (t < TYPE.finalEnter) { st.input = typed; st.lines = TEST_FAIL; st.shown = TEST_FAIL.length; }
     else { st.lines = PASS_LOG; st.shown = clamp((t - T.green) / 4.5) * PASS_LOG.length; }
   }
   // the little friend's message at the end
@@ -126,8 +128,13 @@ export function terminalState(t) {
 
 // average colour of the light the screen throws into the room
 export function screenLight(t) {
-  if (t >= T.fail1 && t < T.fail1 + 2.6) return lerp3([255, 150, 160], [190, 200, 245], clamp((t - T.fail1 - 0.8) / 1.8));
-  if (t >= T.fail2 && t < T.fail2 + 3.0) return lerp3([255, 140, 150], [195, 200, 240], clamp((t - T.fail2 - 1.0) / 2));
+  if (t >= T.fail1 && t < T.fail1 + 2.6) return lerp3([228, 172, 195], [190, 200, 245], clamp((t - T.fail1 - 0.8) / 1.8));
+  if (t >= T.fail2 && t < T.fail2 + 3.0) return lerp3([228, 165, 188], [195, 200, 240], clamp((t - T.fail2 - 1.0) / 2));
+  // the bug scrambling the code makes the whole screen flicker (magenta/white glitches)
+  if (t >= T.glitch - 0.2 && t < T.situp + 2.5) {
+    const f = Math.max(0, Math.sin((t - T.glitch) * 7)) * (hash2(Math.floor(t * 12), 77) > 0.45 ? 1 : 0.2);
+    return lerp3([190, 200, 245], [240, 150, 235], 0.75 * f);
+  }
   if (t >= T.green) return lerp3([195, 205, 240], [170, 245, 185], clamp((t - T.green - 1) / 3));
   return [190, 200, 245];
 }

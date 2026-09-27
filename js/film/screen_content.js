@@ -17,10 +17,12 @@ const K = key;
 const ED = { x: 0, y: 44, lh: 38.5, fs: 25, gut: 80, cw: 15.0 };
 const PROMPT_Y = TERM.y + TERM.h - 70 - 26; // top of the prompt box: where the little friend stands
 const TSIZE = 74;
+export const LEAP_END = 64.9;                          // it dives into the text here
+export const LAND = [238.5, 208];                      // editor: line 4, col 9 (where the code world begins)
 
 // ------------------------------------------------------------------ the little friend in the terminal
 export function cubeTerm(t) {
-  if (t >= 64.4 && t < 262.2) return null;
+  if (t >= LEAP_END && t < 262.2) return null;
   const S = { size: TSIZE, x: 1800, y: PROMPT_Y, ink: '#15110f', flip: -1 };
   S.blink = blinksAt(t, [2.1, 5.6, 9.3, 12.2, 15.1, 20.8, 26.3, 29.9, 31.6, 36.8, 40.2, 44.1, 47.9, 55.3, 57.0, 264.1, 266.9]);
   S.sq = Math.sin(t * 2.6) * 0.015;
@@ -38,7 +40,7 @@ export function cubeTerm(t) {
     S.emote = { type: '?', k: K(t, [[53.4, 0], [53.6, 1, 'outBack'], [55.2, 1], [55.4, 0]]), dx: 0.3 };
   }
   // resolve: a deep breath, a nod, then it marches to the edge of the terminal
-  if (at(58.4, 64.4)) {
+  if (at(58.4, LEAP_END)) {
     const d = t - 58.4;
     S.lookY = K(d, [[0, -1], [0.6, 0]]); S.lookX = 0;
     S.sq = K(d, [[0.4, 0], [1.4, -0.16, 'inOut'], [1.8, -0.16], [2.4, 0.08, 'out'], [2.7, 0]]);
@@ -51,18 +53,27 @@ export function cubeTerm(t) {
     if (d > 3.3 && d < 5.0) { const dist = 1800 - x; S.walk = dist / (TSIZE * 0.34); S.walkAmt = 0.9; S.lean = -0.08; S.y -= Math.abs(Math.sin(S.walk * Math.PI)) * 5; S.armL = { a: Math.sin(S.walk * TAU) * 0.7 }; S.armR = { a: -Math.sin(S.walk * TAU) * 0.7 }; }
     S.x = x;
     S.flip = -1;
-    // at the edge: a look down at the code, crouch… and leap into the editor
+    // at the edge: a look down at the code, crouch… and leap into the editor (lands in line 4, where
+    // the code world begins)
     if (d >= 5.0) {
       const j = d - 5.0;
-      S.lookX = 0.9; S.lookY = 0.5;
-      S.sq = K(j, [[0, 0], [0.2, 0.05], [0.55, 0.4, 'in']]);
+      S.lookX = K(j, [[0, 0.9], [0.3, 0.9]]); S.lookY = K(j, [[0, 0.5], [0.35, 0.9]]);
+      S.sq = K(j, [[0, 0], [0.2, 0.05], [0.55, 0.42, 'in']]);
+      S.lean = K(j, [[0.2, 0], [0.55, 0.12]]);
+      S.armL = { a: K(j, [[0.2, 0], [0.55, -0.8]]) }; S.armR = S.armL;
       S.eyes = j > 0.4 ? 'squeeze' : 'wide';
       if (j > 0.6) {
-        const k = clamp((j - 0.6) / 0.8);
-        S.x = lerp(1236, 760, k); S.y = PROMPT_Y - 520 * 4 * k * (1 - k) + k * (430 - PROMPT_Y) * 0;
-        S.y = lerp(PROMPT_Y, 300, k) - 360 * 4 * k * (1 - k);
-        S.sq = -0.25; S.rot = -0.3 * S.flip; S.armL = { a: 1.5 }; S.armR = { a: 1.3 }; S.legSpread = 1;
-        S.size = TSIZE * (1 - 0.35 * k);
+        const k = clamp((j - 0.6) / (LEAP_END - 64.0));
+        const e = k;
+        S.x = lerp(1236, LAND[0], e);
+        S.y = lerp(PROMPT_Y, LAND[1], e) - 330 * 4 * e * (1 - e);
+        S.sq = k < 0.2 ? -0.3 : k > 0.8 ? -0.28 : -0.1;
+        S.rot = lerp(-0.25, 0.55, k) * -S.flip * -1;
+        S.bend = lerp(0.35, -0.2, k);
+        S.armL = { a: lerp(1.4, 2.2, k) }; S.armR = { a: lerp(1.2, 2.3, k) }; S.legSpread = Math.sin(k * Math.PI) * 1.1;
+        S.eyes = k < 0.3 ? 'squeeze' : 'wide';
+        S.size = TSIZE * (1 - 0.3 * k);
+        S.lean = 0;
       }
     }
   }
@@ -123,11 +134,37 @@ export function screenContent(ctx, t, o = {}) {
     if (c) { const [x, y] = toEditor(c.x, c.y, t); drawCube2(ctx, { ...c, x, y, size: c.size * MINI * 1.35, emote: null, lw: 2 }); }
     ctx.restore();
   }
+  // the dive: the text splashes like water where it went in
+  if (t >= LEAP_END && t < LEAP_END + 1.6) drawSplash(ctx, t - LEAP_END);
   // the little friend at home on the prompt line (or leaping out of it)
   if (cube) { setEmoteInk('#efe5d3'); drawCube2(ctx, cube); setEmoteInk(null); }
   // mouse pointer for the breakpoints
   const mp = mouseAt(t);
   if (mp) drawPointer(ctx, mp[0], mp[1], mp[2]);
+}
+
+function drawSplash(ctx, d) {
+  const x = LAND[0], y = LAND[1] + 6;
+  ctx.save();
+  for (let r = 0; r < 3; r++) {
+    const k = clamp((d - r * 0.18) / 1.1);
+    if (k <= 0 || k >= 1) continue;
+    ctx.strokeStyle = `rgba(243,154,98,${0.7 * (1 - k)})`; ctx.lineWidth = 3 * (1 - k) + 1;
+    ctx.beginPath(); ctx.ellipse(x, y, 20 + k * 150, 4 + k * 22, 0, 0, TAU); ctx.stroke();
+  }
+  // characters knocked up out of the line, falling back
+  const chars = 'let{};()=+<i0';
+  ctx.font = `bold 22px ${MONO_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < 13; i++) {
+    const a = -Math.PI / 2 + (i / 12 - 0.5) * 2.2;
+    const v = 260 + (i % 4) * 70;
+    const tt = Math.min(d, 1.2);
+    const px = x + Math.cos(a) * v * tt * 0.6, py = y + Math.sin(a) * v * tt + 520 * tt * tt;
+    const al = clamp(1 - d / 1.3);
+    ctx.fillStyle = `rgba(230,225,214,${al})`;
+    ctx.save(); ctx.translate(px, py); ctx.rotate(i * 0.7 + d * 6 * (i % 2 ? 1 : -1)); ctx.fillText(chars[i], 0, 0); ctx.restore();
+  }
+  ctx.restore();
 }
 
 // mouse: goes to the gutter and clicks for each breakpoint

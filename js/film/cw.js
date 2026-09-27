@@ -57,8 +57,8 @@ export const CUBE_PATH = resolve([
   { type: 'jump', t0: 154.9, t1: 155.5, from: [19, 14], to: [18, 9], h: 110, hard: 1.4 },
   { type: 'stand', t0: 155.5, t1: 160.5, at: [18, 9] },
   // the quiet moment: sits on the end of line 18, legs dangling
-  { type: 'run', t0: 160.5, t1: 162.6, line: 18, c0: 9, c1: 21, ease: 'inOut' },
-  { type: 'stand', t0: 162.6, t1: 179.0, at: [18, 21] },
+  { type: 'run', t0: 160.5, t1: 162.6, line: 18, c0: 9, c1: 16, ease: 'inOut' },
+  { type: 'stand', t0: 162.6, t1: 179.0, at: [18, 16] },
   // back up to the loop (off camera, montage): arrives on line 4
   { type: 'fall', t0: 191.0, t1: 191.6, from: topOf(4, 5), to: [4, 5], hard: 0.7 },
   { type: 'stand', t0: 191.6, t1: 192.4, at: [4, 5] },
@@ -227,7 +227,7 @@ export function cubeCW(t) {
     S.lookY = K(t, [[162.6, 0.6], [170.4, 0.7], [171.2, -0.9, 'out'], [178, -0.9]]); S.lookX = K(t, [[170.4, 0.2], [171.2, 0]]);
     S.sq = -0.02 + Math.sin(t * 1.2) * 0.015; S.mouth = t < 171.4 ? 'frown' : t < 173.6 ? null : 'smile';
     S.flip = 1;
-    if (t > 172) { const w = K(t, [[172.0, 0], [172.4, 1, 'outBack'], [174.6, 1], [175.2, 0]]); S.armR = { a: w * 1.9 + Math.sin(t * 9) * 0.25 * w }; S.eyes = t > 173.4 ? 'happy' : 'normal'; S.blink = 0; }
+    if (t > 172) { const w = K(t, [[172.0, 0], [172.4, 1, 'outBack'], [174.6, 1], [175.2, 0]]); S.armR = { a: w * 1.9 + Math.sin(t * 9) * 0.25 * w, front: true, len: 1 + 0.25 * w }; S.eyes = t > 173.4 ? 'happy' : 'normal'; S.blink = 0; }
   }
   // determined walk down to the loop
   if (at(191.6, 200.6)) { S.brows = -0.7; S.lookX = 0.6; S.lookY = 0.3; }
@@ -324,6 +324,8 @@ export function bugCW(t) {
     if (cp) { S.x = cp.x + 6; S.y = cp.y - CUBE_SIZE * (0.84 * (1 - (cp.sq || 0))) - 14 + (d < 1.2 ? 30 : 0); S.rot = Math.sin(t * 11) * 0.2; S.flip = -1; }
   }
   if (t >= 235.2) { const c = cubeCW(t); if (c) { const j = jarBug(t, c); Object.assign(S, j); } }
+  // disguised, it sinks into the row of text (the glyph sits where a real character would)
+  if (S.disguise > 0) S.y += S.disguise * 55;
   return S;
 }
 

@@ -67,6 +67,8 @@ export function drawBackSet(ctx, S, cam, o = {}) {
   shape(ctx, planePoly(cam, dy + 0.2, [[26, 4], [48, 4], [48, 26], [26, 26]]), { fill: '#5f6d82', seed: 835, lw: 2.2 });
   const st = new Stage();
   const bb = (x, y, z, fn, order = 0) => st.add(cam.view(x, z)[1], () => billboard(ctx, cam, x, y, z, fn), order);
+  const ms = S.mouse || [37, 13];
+  bb(ms[0], dy, ms[1], (c, p) => { const f = new Fig(c, { lw: inkFor(p.s) * 0.8, seed: 836 }); f.add('m', [[-3, 0], [3, 0], [2.8, -1.6], [1.6, -2.4], [-1.6, -2.4], [-2.8, -1.6]], { fill: '#efe9df', z: 0 }); f.draw(); }, 0);
   // monitor (stand, bezel, screen)
   bb(0, dy, 52, (c, p) => {
     const fig = new Fig(c, { lw: inkFor(p.s) * 0.9, seed: 841 });
@@ -93,7 +95,7 @@ export function drawBackSet(ctx, S, cam, o = {}) {
       c.save(); c.rotate(a);
       const fig = new Fig(c, { lw: inkFor(p.s) * 0.7, seed: 850 + i });
       fig.add('n', [[-2.5, -2.5], [2.5, -2.5], [2.6, 2.4], [-2.4, 2.6]], { fill: col, z: 0, sharp: true });
-      fig.after((cc) => text(cc, s, 0, 0.2, { size: 1.5, font: /[a-z:)?]/i.test(s) ? HAND_FONT : ZH_FONT, color: '#3b3530' }), 1);
+      fig.after((cc) => text(cc, s, 0, 0.2, { size: s.length > 3 ? 1.25 : 1.6, font: /[a-z:)?]/i.test(s) ? HAND_FONT : ZH_FONT, color: '#3b3530' }), 1);
       fig.draw();
       c.restore();
     }));
@@ -120,7 +122,9 @@ export function drawBackSet(ctx, S, cam, o = {}) {
   st.draw(ctx);
   // ---------------- the character and his chair
   const [sx, sy, sz] = W.seat;
-  if (S.human) billboard(ctx, cam, sx, sy, sz, (c) => drawBack(c, S.human.P, S.human.D, { lights: S.human.lights, seed: 21 }));
+  // he can lean toward the desk (dz) — the chair stays where it is
+  const hz = S.human?.dz || 0;
+  if (S.human) billboard(ctx, cam, sx + (S.human.dx || 0), sy, sz + hz, (c) => drawBack(c, S.human.P, S.human.D, { lights: S.human.lights, seed: 21 }));
   billboard(ctx, cam, sx, sy, sz - 6, (c) => chairBack(c, { tilt: S.chairTilt || 0 }));
   if (o.after) o.after(ctx, cam);
   lightBack(ctx, cam, S);
@@ -193,7 +197,7 @@ function lightBack(ctx, cam, S) {
   const kp = P(0, W.deskY, 18);
   L.point(kp.x, kp.y, 70 * kp.s, sRGB, 0.55 * scr, 1.6, 0.6);
   const hp = P(0, 110, -17);
-  L.point(hp.x, hp.y, 55 * hp.s, sRGB, 0.35 * scr, 1, 1.2);
+  L.point(hp.x, hp.y, 55 * hp.s, sRGB, 0.35 * scr * clamp((hp.d - 70) / 80), 1, 1.2); // fades out in close shots
   // lamp pool
   const lamp = S.lamp ?? 1;
   const lp = P(40, W.deskY, 38);
@@ -212,5 +216,6 @@ function lightBack(ctx, cam, S) {
   if (S.extraLights) S.extraLights(L, cam);
   L.apply();
   addGlow(ctx, sc.x, sc.y, 40 * sc.s, sRGB, 0.16 * scr, 1.2, 0.9);
-  if (lamp > 0.01) { const lh = P(58 - 19.5, W.deskY + 25, 50); addGlow(ctx, lh.x, lh.y, 10 * lh.s, '255,230,170', 0.5 * lamp, 1.3, 0.6); }
+  // the bulb's bloom (off when his head hides the lamp from a close camera)
+  if (lamp > 0.01 && (S.lampGlow ?? 1) > 0) { const lh = P(58 - 19.5, W.deskY + 25, 50); addGlow(ctx, lh.x, lh.y, 10 * lh.s, '255,230,170', 0.5 * lamp * (S.lampGlow ?? 1), 1.3, 0.6); }
 }
