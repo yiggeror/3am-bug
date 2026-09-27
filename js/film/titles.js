@@ -98,8 +98,10 @@ function credits(t0, t1) {
       drawJar(ctx, x, 0, { label: lab, time: tm, lid: 1, s: 0.9, bug: i < 2 ? 'old' : null, big: i === 2, seed: i });
     });
     ctx.restore();
-    // scrolling text
-    let y = 1080 + 60 - lt * 88;
+    // scrolling text: paced so the last line settles at the centre of the frame 2.5 s before the end
+    const H = CREDITS.reduce((h, [k]) => h + (k === 'gap' ? 60 : k === 'h' ? 160 : k === 's' ? 90 : 110), 0);
+    const speed = (1140 + H - 90 - 540) / (t1 - t0 - 2.5);
+    let y = 1140 - Math.min(lt, t1 - t0 - 2.5) * speed;
     for (const [kind, zh, en] of CREDITS) {
       if (kind === 'gap') { y += 60; continue; }
       if (kind === 'h') { text(ctx, zh, 760, y, { size: 90, font: ZH_FONT, color: '#f3ead8', still: true }); text(ctx, en, 760, y + 76, { size: 44, font: HAND_FONT, color: '#b8ae9c', still: true }); y += 160; continue; }

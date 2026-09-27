@@ -80,21 +80,24 @@ export function cubeTerm(t) {
   // the end: back home, types the message, falls asleep against the cursor
   if (t >= 262.2) {
     const d = t - 262.2;
-    S.x = K(d, [[0, 1180], [1.6, 1500, 'inOut']]);
+    S.x = K(d, [[0, 1180], [1.6, 1440, 'inOut']]);
     if (d < 1.6) { const dist = S.x - 1180; S.walk = dist / (TSIZE * 0.34); S.walkAmt = 0.8; S.flip = 1; }
     else S.flip = 1;
     S.lookX = K(d, [[1.6, 0.6], [1.9, 0.1], [2.2, -0.3]]); S.lookY = K(d, [[1.6, 0], [1.9, -1], [3.4, -1], [3.6, 0.6]]);
     S.eyes = d > 1.9 && d < 3.4 ? 'happy' : 'normal';
     // typing: a little hop per character
     if (d > 3.6 && d < 8.0) { const ph = ((d - 3.6) * 2.6) % 1; S.sq = ph < 0.25 ? 0.12 : 0; S.y -= ph > 0.25 && ph < 0.7 ? 10 : 0; S.lookY = 0.7; S.armR = { a: ph < 0.3 ? -0.5 : 0.2 }; }
-    // leans on the cursor and dozes
+    // settles down on top of its message like a loaf, legs tucked in, and dozes off
     if (d > 8.4) {
-      const s = clamp((d - 8.4) / 1.4);
-      S.rot = -0.18 * ease.inOut(s); S.x += 22 * ease.inOut(s);
-      S.eyes = d > 9.2 ? 'content' : 'normal';
-      S.blink = d > 8.8 && d < 9.2 ? 1 - (9.2 - d) / 0.4 : 0;
-      S.sq = 0.04 + Math.sin(d * 1.4) * 0.03;
-      S.emote = { type: 'zzz', k: clamp((d - 10.5) / 1.5), dx: 0.3 };
+      const s2 = ease.inOut(clamp((d - 8.4) / 1.2));
+      S.lookX = K(d, [[8.4, -0.3], [8.9, -0.5]]); S.lookY = K(d, [[8.4, 0.6], [8.9, 0.8]]);
+      S.tuck = s2; S.sq = 0.1 * s2 + Math.sin(d * 1.4) * 0.025 * s2;
+      S.rot = K(d, [[8.4, 0], [8.9, 0.08, 'out'], [9.6, -0.04, 'inOut']]);
+      S.x += 10 * s2;
+      S.eyes = d > 9.4 ? 'content' : d > 8.9 ? 'closed' : 'normal';
+      S.blink = d > 8.9 && d < 9.4 ? 0.6 : 0;
+      S.armL = { a: -0.9 * s2 }; S.armR = { a: -0.9 * s2 };
+      S.emote = { type: 'zzz', k: clamp((d - 10.2) / 1.5), dx: 0.3 };
       S.blush = 0.3;
     }
   }

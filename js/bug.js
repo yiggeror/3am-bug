@@ -116,7 +116,7 @@ export function drawBug(ctx, st) {
     // the disguise: two cyan bars of an "=", eyes peeking from the top bar
     const k = clamp((dk - 0.3) / 0.7);
     const col = s.glyphColor;
-    const bw = lerp(0.3, 0.46, k), bh = 0.1, gap = lerp(0.02, 0.13, k);
+    const bw = lerp(0.3, 0.33, k), bh = 0.13, gap = lerp(0.02, 0.24, k);   // the size of a real "=" in the code font
     ctx.save(); ctx.globalAlpha *= k;
     const g = new Fig(ctx, { lw: lw * 0.7, seed: 1709, ink: s.ink });
     g.add('bar1', rectPts(-bw, -0.34 - gap / 2 - bh, bw * 2, bh, 0.04, 0.02), { fill: col, z: 0 });
@@ -124,7 +124,14 @@ export function drawBug(ctx, st) {
     const peek = s.peek ?? 0.5;
     if (peek > 0.05) for (const i of [-1, 1]) g.line(ellipsePts(i * 0.1 + s.lookX * 0.05, -0.34 - gap / 2 - bh * 0.5, 0.035, 0.035 * peek, 8), { z: 1, fill: '#140f18', stroke: false });
     // tiny feet giving it away
-    if (s.feet) for (const i of [-1, 0, 1]) g.line([[i * 0.18, -0.34 + gap / 2 + bh], [i * 0.18 + 0.02, -0.22]], { z: -1, lw: lw * 0.6, brush: false, color: s.ink, alpha: s.feet });
+    if (s.feet) {
+      const yb = -0.34 + gap / 2 + bh;
+      for (const i of [-1, 0, 1]) {
+        const fx = i * 0.2 + Math.sin((s.tremble || 0) * 40 + i) * 0.015;
+        g.add('leg' + i, [[fx - 0.03, yb - 0.02], [fx + 0.03, yb - 0.02], [fx + 0.03, yb + 0.1 * s.feet], [fx - 0.03, yb + 0.1 * s.feet]], { fill: s.body, z: -1 });
+        g.add('shoe' + i, ellipsePts(fx + 0.04, yb + 0.1 * s.feet + 0.02, 0.07 * s.feet, 0.045 * s.feet, 10), { fill: s.shell, z: -0.5 });
+      }
+    }
     g.draw();
     ctx.restore();
   }

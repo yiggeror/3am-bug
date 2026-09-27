@@ -102,7 +102,7 @@ export function searchAim(t) {
     const sweep = [[T.search + 2.0, [charCX(8), LINES[4].ground]], [T.search + 3.2, [charCX(30), LINES[7].ground]], [T.search + 4.2, [charCX(10), LINES[10].ground]], [T.searchHit, [charCX(25), LINES[10].ground], 'inOut']];
     return { p: K(t, sweep), k: K(t, [[T.search + 2.0, 0], [T.search + 2.4, 1], [T.lunge1, 1], [T.lunge1 + 0.3, 0]]), w: t < T.searchHit ? 200 : 120 };
   }
-  if (t >= T.pin && t < T.caught + 0.5) return { p: [charCX(20), LINES[6].ground + 100], k: K(t, [[T.pin, 0], [T.pin + 0.5, 1], [T.caught, 1], [T.caught + 0.5, 0]]), w: 520 };
+  if (t >= T.pin + 1.0 && t < T.caught + 0.5) return { p: [charCX(20), LINES[6].ground + 100], k: K(t, [[T.pin + 1.0, 0], [T.pin + 1.5, 1], [T.caught, 1], [T.caught + 0.5, 0]]), w: 520 };
   return null;
 }
 export function drawSearchlight(ctx, cam, t) {
@@ -126,7 +126,7 @@ export function drawSearchlight(ctx, cam, t) {
 export function drawFindBar(ctx, t) {
   let q = null, count = '';
   if (t >= T.search + 1.2 && t < T.log - 2) { q = 'total'.slice(0, Math.floor(clamp((t - T.search - 1.2) / 1.0) * 5)); count = t > T.search + 3 ? '5 matches' : ''; }
-  if (t >= T.pin && t < T.caught) { q = 'items[i]'; count = '1 match'; }
+  if (t >= T.pin && t < T.caught) { const n = Math.floor(clamp((t - T.pin - 0.25) / 0.72) * 8.999); q = 'items[i]'.slice(0, n); count = n >= 8 ? '1 match' : ''; }
   if (q === null) return;
   ctx.save();
   const x = 1920 - 560, y = 40;

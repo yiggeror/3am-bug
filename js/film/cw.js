@@ -390,7 +390,7 @@ export function worldCW(t) {
   // search highlights
   W.highlights = [];
   if (t >= T.search + 3 && t < T.log) for (const [line, c0] of [[4, 6], [7, 4], [10, 4], [10, 24], [12, 21]]) W.highlights.push({ line, c0, c1: c0 + 5, k: clamp((t - T.search - 3) / 0.4) });
-  if (t >= T.pin && t < T.caught) W.highlights.push({ line: 6, c0: 17, c1: 25, k: clamp((t - T.pin) / 0.4) });
+  if (t >= T.pin + 1.0 && t < T.caught) W.highlights.push({ line: 6, c0: 17, c1: 25, k: clamp((t - T.pin - 1.0) / 0.4) });
   // the fake "o": the text's own "o" is hidden while the bug sits in its place
   const b = bugCW(t);
   if (b && b.disguise > 0.5 && b.glyph === 'o') W.removed = { ...(W.removed || {}), 10: [25] };

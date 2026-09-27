@@ -115,6 +115,11 @@ export function drawEditor(ctx, sc, t) {
     if (ly < y - lh || ly > y + h + lh) continue;
     if (sc.errLine === i) { ctx.fillStyle = PAL.redBg; ctx.fillRect(x + gut, ly - lh / 2, w - gut, lh); }
     if (sc.okLine === i) { ctx.fillStyle = PAL.greenBg; ctx.fillRect(x + gut, ly - lh / 2, w - gut, lh); }
+    // all tests pass: a green wave rolls down the file
+    if (sc.greenWave !== undefined) {
+      const d = sc.greenWave - i * 0.07, gk = clamp(d / 0.25) * (1 - clamp((d - 0.9) / 1.4));
+      if (gk > 0) { ctx.fillStyle = `rgba(120,230,140,${0.22 * gk})`; ctx.fillRect(x + gut, ly - lh / 2, w - gut, lh); }
+    }
     if (sc.cursor && sc.cursor.line === i) { ctx.fillStyle = 'rgba(255,255,255,0.035)'; ctx.fillRect(x + gut, ly - lh / 2, w - gut, lh); }
     ctx.fillStyle = sc.cursor && sc.cursor.line === i ? PAL.text : PAL.dim2;
     ctx.textAlign = 'right';
@@ -161,6 +166,7 @@ export function drawEditor(ctx, sc, t) {
   // problems badge in the status bar
   ctx.fillStyle = '#17181f'; ctx.fillRect(x, y + h - 30, w, 30);
   ctx.font = `17px ${MONO_FONT}`; ctx.textBaseline = 'middle';
+  if (sc.allGreen) { ctx.fillStyle = '#7fd88f'; ctx.fillText('✓ 6 passed · 0 problems', x + 16, y + h - 15); }
   if (sc.problems) { ctx.fillStyle = PAL.red; ctx.fillText(`⊗ ${sc.problems >= 99 ? '99+' : sc.problems} problems`, x + 16, y + h - 15); }
   else { ctx.fillStyle = PAL.dim; ctx.fillText('⊗ 0  ⚠ 0', x + 16, y + h - 15); }
   ctx.fillStyle = PAL.dim; ctx.textAlign = 'right'; ctx.fillText('JavaScript   UTF-8   Ln ' + ((sc.cursor?.line ?? 0) + 1) + ', Col ' + ((sc.cursor?.col ?? 0) + 1), x + w - 16, y + h - 15); ctx.textAlign = 'left';

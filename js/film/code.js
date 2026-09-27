@@ -34,6 +34,9 @@ export const TYPE = {
   undo: T.undo + 0.2,
   fix: T.caught + 0.1,
 };
+// "items[i]" typed into the find box (Ctrl+F at T.pin, one key every 0.09 s)
+export const PIN_TYPE = T.pin + 0.25;
+export const pinChars = (t) => Math.floor(clamp((t - PIN_TYPE) / 0.72) * 8.999);
 export function editorCode(t) {
   const code = clone(CODE);
   if (t >= TYPE.q1 && t < TYPE.q1Out) setLineText(code, 7, [['v', '    total'], ['o', ' += '], ['v', 'item'], ['o', '?'], ['p', '.'], ['x', 'price'], ['o', ' * '], ['v', 'item'], ['o', '?'], ['p', '.'], ['x', 'qty'], ['p', ';']]);
@@ -80,8 +83,13 @@ export function editorState(t) {
   // breakpoints
   if (t >= T.bp1 + 0.5) st.breakpoints.push(9);
   if (t >= T.bp2 + 0.5) st.breakpoints.push(4);
-  if (t >= T.pin && t < T.caught) { st.find = { q: 'items[i]', count: '1 of 1' }; st.hl.push({ line: 6, c0: 17, c1: 25, color: 'rgba(255,209,102,0.35)' }); }
+  if (t >= T.pin && t < T.caught) {
+    const n = pinChars(t);
+    st.find = { q: 'items[i]'.slice(0, n), count: n >= 8 ? '1 of 1' : '' };
+    if (t >= T.pin + 1.0) st.hl.push({ line: 6, c0: 17, c1: 25, color: 'rgba(255,209,102,0.35)' });
+  }
   if (t >= TYPE.fix && t < T.green + 3) { st.okLine = 5; st.cursor = { line: 5, col: 21 }; st.dirty = t < TYPE.fix + 1.2; }
+  if (t >= T.green) { st.greenWave = t - T.green; st.allGreen = true; }
   if (t >= T.glitch - 0.2 && t < T.situp + 2.5) st.glitch = Math.max(st.glitch, 0.08 + 0.12 * Math.max(0, Math.sin((t - T.glitch) * 7)));
   return st;
 }
