@@ -4,7 +4,13 @@
   "type": "module",
   "description": "凌晨三点的 Bug · 3 A.M. Bug — a short hand-drawn animated film rendered entirely in code.",
   "scripts": {
-    "serve": "node production/tools/serve.cjs 8080"
+    "serve": "node production/tools/serve.cjs 8080",
+    "cues": "node production/tools/export_cues.mjs",
+    "score": "python3 production/audio/score.py",
+    "mix": "python3 production/audio/mix.py",
+    "frames": "node production/tools/render_video.cjs --frames-only 1",
+    "encode": "sh production/tools/encode_all.sh",
+    "site": "node production/tools/build_site.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0",

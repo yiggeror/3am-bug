@@ -253,7 +253,7 @@ export function drawJar(ctx, x, y, o = {}) {
 export function drawNewJar(ctx, t) {
   const J = jarState(t);
   if (!J) return;
-  drawJar(ctx, J.x, J.y, { lid: J.lid, label: J.label ? 'FIXED ✓' : null, time: '04:52', big: true, s: J.k, seed: 9 });
+  drawJar(ctx, J.x, J.y, { lid: J.lid, label: J.label ? 'FIXED ✓' : null, time: '04:55', big: true, s: J.k, seed: 9 });
 }
 
 // dizzy stars around the little friend

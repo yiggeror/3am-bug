@@ -14,10 +14,8 @@ CAND = os.path.join(HERE, '..', 'sfx_candidates')
 
 # new clips: id → (source, start, end, fade_in, fade_out)
 NEW = {
-    'birds':      ('dawn_chorus/611453.mp3', 2.0, 94.0, 1.0, 1.0),
+    'birds':      ('dawn_chorus/611453.mp3', 2.0, 52.0, 1.0, 1.0),
     'rewind':     ('cassette_tape_rewind/372876.mp3', 0.26, 2.85, 0.02, 0.25),
-    'rewind2':    ('cassette_tape_rewind/679970.mp3', 0.05, 2.2, 0.02, 0.2),
-    'jar_open':   ('glass_jar_lid/829781.mp3', 0.24, 0.9, 0.003, 0.15),
     'jar_close':  ('glass_jar_lid/829781.mp3', 1.82, 2.55, 0.003, 0.15),
     'lid_off':    ('glass_jar_lid/435000.mp3', 0.0, 0.6, 0.002, 0.15),
     'clink1':     ('glass_jar_clink/565725.mp3', 0.60, 1.4, 0.002, 0.2),
@@ -54,7 +52,7 @@ def get(name):
     if not os.path.exists(fn):
         if name not in NEW: raise FileNotFoundError(name)
         os.makedirs(CLIPS, exist_ok=True)
-        sf.write(fn, _prepare(name), SR, subtype='PCM_24')
+        sf.write(fn, _prepare(name), SR, subtype='PCM_16')
     x, sr = sf.read(fn, dtype='float32')
     if x.ndim > 1: x = x.mean(axis=1)
     assert sr == SR

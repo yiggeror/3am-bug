@@ -12,6 +12,7 @@ const { renderFrame, DURATION, shotAt } = mod;
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 window.render = (t) => { renderFrame(ctx, parseFloat(t)); };
 window.renderRaw = (t) => { renderFrame(ctx, t); };
+window.renderScaled = (t, m) => { renderFrame(ctx, t, m); };
 window.DURATION = DURATION;
 window.shotName = (t) => shotAt(t).name;
 await Promise.all([document.fonts.load('40px "Patrick Hand"'), document.fonts.load('40px "ZCOOL KuaiLe"', '动作测试'), document.fonts.load('20px "JetBrains Mono"'), document.fonts.load('bold 20px "JetBrains Mono"')]);

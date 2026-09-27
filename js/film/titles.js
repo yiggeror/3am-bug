@@ -91,7 +91,7 @@ function credits(t0, t1) {
     ctx.save();
     ctx.translate(1500, 930);
     ctx.fillStyle = '#6b5440'; ctx.fillRect(-260, 0, 520, 14);
-    const jars = [['off-by-one', '01:13'], ['undefined', '23:40'], ['FIXED ✓', '04:52']];
+    const jars = [['off-by-one', '01:13'], ['undefined', '23:40'], ['FIXED ✓', '04:55']];
     jars.forEach(([lab, tm], i) => {
       const x = -170 + i * 170;
       if (i === 2) drawBug(ctx, { x, y: -12, size: 44, flip: -1, eyes: lt > 9 ? 'closed' : 'sly', mouth: lt > 9 ? 'o' : 'grin', mouthK: 0.4, ant: Math.sin(tc * 3) * 0.4, emote: lt > 9 ? { type: 'zzz', k: clamp((lt - 9) / 1) } : null });
