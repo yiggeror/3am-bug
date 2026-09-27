@@ -85,26 +85,31 @@ export function drawKeysSet(ctx, S, cam) {
   const q = (pts) => projPoly(cam, pts);
   fig.add('front', q([[kx0, 74, kz0], [kx1, 74, kz0], [kx1, KBY, kz0], [kx0, KBY, kz0]]), { fill: '#d9d1c3', z: 0, sharp: true });
   fig.add('top', q([[kx0, KBY, kz0], [kx1, KBY, kz0], [kx1, KBY + 0.3, kz1], [kx0, KBY + 0.3, kz1]]), { fill: '#e9e2d6', z: 0.1, sharp: true, edge: true });
-  // keys
+  // keys: real keycaps (sloped front / side faces + top), painted back-to-front from the camera
   const down = S.keysDown || {};
+  fig.add('plate', q([[kx0 + 0.6, KBY + 0.32, kz0 + 0.5], [kx1 - 0.6, KBY + 0.32, kz0 + 0.5], [kx1 - 0.6, KBY + 0.32, kz1 - 0.5], [kx0 + 0.6, KBY + 0.32, kz1 - 0.5]]), { fill: '#8f877c', z: 0.15, sharp: true, noOutline: true });
   fig.after((c) => {
-    const ids = Object.keys(KEYS).sort((a, b) => KEYS[b].z - KEYS[a].z);
+    const ids = Object.keys(KEYS).sort((a, b) => (KEYS[b].z - KEYS[a].z) || (Math.abs(KEYS[b].x - cam.x) - Math.abs(KEYS[a].x - cam.x)));
+    const face = (pts, fill) => {
+      const pp = q(pts);
+      c.beginPath(); pp.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath();
+      c.fillStyle = fill; c.fill();
+      c.strokeStyle = 'rgba(43,38,34,0.75)'; c.lineWidth = Math.max(1, ups * 0.045); c.lineJoin = 'round'; c.stroke();
+    };
     for (const id of ids) {
       const k = KEYS[id];
       const dn = clamp(down[id] || 0);
-      const yT = TOPY - dn * 0.45, yB = KBY + 0.35;
+      const yT = TOPY - dn * 0.5, yB = KBY + 0.3;
       const x0 = k.x - k.w / 2, x1 = k.x + k.w / 2, z0 = k.z - k.d / 2, z1 = k.z + k.d / 2;
-      const inset = 0.18;
-      const fr = q([[x0, yB, z0], [x1, yB, z0], [x1 - inset, yT, z0 + inset], [x0 + inset, yT, z0 + inset]]);
-      c.fillStyle = '#d7cfc1'; c.beginPath(); fr.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
-      const tp = q([[x0 + inset, yT, z0 + inset], [x1 - inset, yT, z0 + inset], [x1 - inset, yT, z1 - inset * 0.5], [x0 + inset, yT, z1 - inset * 0.5]]);
-      c.fillStyle = dn > 0.05 ? '#ece5d8' : '#faf6ef';
-      c.beginPath(); tp.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
-      c.strokeStyle = 'rgba(43,38,34,0.55)'; c.lineWidth = Math.max(1, ups * 0.05); c.stroke();
-      // legend
-      const cp = P(k.x - k.w * 0.22, yT, k.z + 0.15);
+      const i = 0.22; // the cap narrows toward its top
+      const t0 = [x0 + i, yT, z0 + i * 1.3], t1 = [x1 - i, yT, z0 + i * 1.3], t2 = [x1 - i, yT, z1 - i * 0.6], t3 = [x0 + i, yT, z1 - i * 0.6];
+      if (cam.x < x0) face([[x0, yB, z1], [x0, yB, z0], t0, t3], dn > 0.05 ? '#d9d1c3' : '#e4dccf');
+      if (cam.x > x1) face([[x1, yB, z0], [x1, yB, z1], t2, t1], dn > 0.05 ? '#d9d1c3' : '#e4dccf');
+      face([[x0, yB, z0], [x1, yB, z0], t1, t0], dn > 0.05 ? '#c9c0b1' : '#d6cdbe');
+      face([t0, t1, t2, t3], dn > 0.05 ? '#ece5d8' : '#faf6ef');
+      const cp = P(k.x - k.w * 0.2, yT, k.z + 0.1);
       const lab = k.name.length > 1 ? k.name : k.name.toUpperCase();
-      if (lab.trim()) text(c, lab, cp.x, cp.y, { size: Math.max(8, cp.s * (lab.length > 1 ? 0.42 : 0.62)), font: MONO_FONT, color: '#5b534b', still: true });
+      if (lab.trim()) text(c, lab, cp.x, cp.y, { size: Math.max(8, cp.s * (lab.length > 1 ? 0.4 : 0.6)), font: MONO_FONT, color: '#5b534b', still: true });
     }
   }, 0.2);
   fig.draw();

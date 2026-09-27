@@ -3,6 +3,7 @@
 import { makeFilm } from './film.js';
 import { DESIGNS } from './human/design.js';
 import { drawSideSet } from './sets/side.js';
+import { sideHeadContact } from './human/body.js';
 import { drawFrontSet } from './sets/front.js';
 import { drawBackSet } from './sets/back.js';
 import { drawKeysSet, typingState } from './sets/keys.js';
@@ -197,12 +198,14 @@ function frontShot(t0) {
 }
 
 // ================================================================== 4. SIDE: forehead slowly down onto the keyboard … then bolt upright
+const KB_TOP = -29.3; // key tops (body y) in the side set
 function perfSideDown(t) {
   const P = evalTracks({
-    bend: [[0, 0.06], [1.0, 0.08], [3.55, 0.84, 'inOut'], [3.72, 0.88, 'out'], [3.9, 0.86], [6.4, 0.86], [6.55, 0.8, 'out'], [6.66, 0.84, 'in'], [6.95, -0.13, 'outBack'], [7.35, -0.05], [8.2, 0.12, 'inOut'], [10.5, 0.13]],
-    slump: [[0, 0.55], [3.6, 0.72], [6.6, 0.72], [6.95, 0.0, 'out'], [10.5, 0.06]],
+    // the torso only folds ~45°; the neck does the rest (chin tucked), so the *forehead* lands on the keys
+    bend: [[0, 0.06], [2.0, 0.08], [3.85, 0.34, 'inOut'], [6.4, 0.34], [6.55, 0.3, 'out'], [6.66, 0.32, 'in'], [6.95, -0.13, 'outBack'], [7.35, -0.05], [8.2, 0.12, 'inOut'], [10.5, 0.13]],
+    slump: [[0, 0.55], [2.0, 0.6], [3.85, 0.5], [6.6, 0.5], [6.95, 0.0, 'out'], [10.5, 0.06]],
     sy: [[6.66, 1], [6.9, 1.075, 'out'], [7.25, 0.99, 'inOut'], [7.5, 1]],
-    'head.nod': [[0, 0.3], [1.2, 0.35], [3.55, 0.78, 'inOut'], [3.75, 0.82, 'out'], [6.5, 0.8], [6.95, -0.25, 'outBack'], [7.4, -0.06], [8.2, 0.12], [10.5, 0.12]],
+    'head.nod': [[0, 0.3], [1.3, 0.35], [2.4, 0.9, 'inOut'], [3.85, 2.2, 'inOut'], [3.98, 2.26, 'out'], [4.15, 2.2], [6.45, 2.2], [6.6, 2.0, 'out'], [6.95, -0.25, 'outBack'], [7.4, -0.06], [8.2, 0.12], [10.5, 0.12]],
     'face.lid': [[0, 0.45], [2.0, 0.7], [2.6, 1]],
     'face.brow': [[0, 0.3], [6.8, 0.3], [6.95, 0.7], [8.5, 0.55]],
     'hair.mess': [[0, 0.55], [4, 0.62]],
@@ -211,16 +214,22 @@ function perfSideDown(t) {
   if (t > 6.85) P.face.lid = K(t, [[6.85, 0], [8.8, 0], [8.9, 1], [9.0, 0], [9.12, 1], [9.22, 0]]);
   P.face.mouth = t < 1.5 ? 'flat' : t < 6.85 ? 'frown' : t < 8.4 ? 'o' : 'line';
   P.face.mouthK = 0.7;
-  // arms: from the keyboard, sliding back over the desk edge, slipping off and dangling; snap back up
-  const swing = t > 3.35 && t < 6.5 ? Math.sin((t - 3.35) * 5.5) * Math.exp(-(t - 3.35) * 1.6) : 0;
+  // arms: slide back off the keys to the desk edge, slip off and hang from the shoulders (a pendulum that
+  // follows the torso), then snap back up onto the keyboard. Elbows can only flex forward (rig constraint).
   for (const [nm, dx, dy, lagT] of [['armR', 0, 0, 0], ['armL', 3, -1.2, 0.07]]) {
     const tt = t - lagT;
-    const hand = K(tt, [[1.3, [35 + dx, -29.5 + dy]], [2.5, [26 + dx, -28.9 + dy], 'inOut'], [3.25, [17 + dx * 0.4, -5], 'in'], [3.55, [18.5, -1.5], 'out'], [6.62, [18, -2]], [6.95, [30 + dx, -29.2 + dy], 'outBack'], [7.5, [35 + dx, -29.5 + dy], 'inOut']]);
-    const dang = tt > 3.25 && tt < 6.62;
-    P[nm] = { hand: [hand[0] + swing * 3.2, hand[1] - Math.abs(swing) * 0.8], bend: dang ? 1 : -1, hp: { view: 'side', curl: dang ? 0.25 : 0.8, rot: dang ? 0.5 : 0 } };
+    const kb = [35 + dx, -29.5 + dy];
+    const hand = K(tt, [[1.3, kb], [2.5, [25 + dx, -28.9 + dy], 'inOut'], [2.9, [19.5 + dx * 0.4, -27.8 + dy], 'in'], [6.62, [19.5 + dx * 0.4, -27.8 + dy]], [6.95, [30 + dx, -29.2 + dy], 'outBack'], [7.5, kb, 'inOut']]);
+    const hangK = K(tt, [[2.85, 0], [3.2, 1, 'in'], [6.62, 1], [6.88, 0, 'out']]);
+    const ts = tt - 3.2;
+    const phi = ts > 0 ? 0.32 * Math.sin(ts * 4.3) * Math.exp(-ts * 1.25) + 0.04 * Math.sin(ts * 1.3) : 0.25;
+    const L = 39.5;
+    P[nm] = { hand, hang: [2 + Math.sin(phi) * L, Math.cos(phi) * L], hangK, hp: hangK > 0.5 ? { view: 'side', curl: 0.25, rot: 0.15 } : { view: 'side', curl: 0.8 } };
   }
   const br = t > 3.9 && t < 6.5 ? 1.6 : 1;
-  return idle(P, t, { seed: 11, amp: br, rate: 0.2, noBlink: t > 2.4 && t < 6.9 });
+  const Q = idle(P, t, { seed: 11, amp: br, rate: 0.2, noBlink: t > 2.4 && t < 6.9 });
+  // the forehead rests *on* the key tops: never lower
+  return sideHeadContact(Q, D, KB_TOP);
 }
 function sideDownShot(t0) {
   const dur = 10.6;
@@ -232,7 +241,7 @@ function sideDownShot(t0) {
       const k = ease.inOut(clamp(lt / dur));
       const push = K(lt, [[0, 0], [3.8, 1, 'inOut'], [6.6, 1], [6.9, 0.6, 'out'], [10.6, 0.75]]);
       const cam = { x: lerp(24, 26, push), y: lerp(-44, -38, push), zoom: lerp(7.6, 9.2, push) + (lt > 6.66 && lt < 6.8 ? 0.25 : 0) };
-      const faceDown = lt > 3.72 && lt < 6.8;
+      const faceDown = lt > 3.85 && lt < 6.62;
       drawSideSet(ctx, { t, tod: 0.05, lamp: 1, screen: 1, cups: 3, screenRGB: '190,200,245', kbPress: faceDown ? [0.6, 0.9, 0.7, 0.3, 0] : null, human: { P, D, lights: [{ rgb: '190,205,255', a: 0.6, vs: [[3.5, 0]] }] } }, cam);
       if (faceDown) text(ctx, 'hhhjjjjjjjjjjjjjkkkkkkkkk', 1500, 150, { size: 26, font: MONO_FONT, color: 'rgba(255,255,255,0.0)', still: true });
     },
@@ -258,9 +267,9 @@ function perfCheer(t) {
   const jig = t > 2.5 && t < 4.3 ? Math.sin((t - 2.5) * 22) * 0.6 : 0;
   for (const [nm, dx, lag, far] of [['armR', 0, 0, 0], ['armL', -8, 0.06, 1]]) {
     const tt = t - lag;
-    const hand = K(tt, [[1.45, [35 + far * 3, -29.5 - far * 1.2]], [1.85, [21, -42 - far * 2], 'inOut'], [2.26, [12 + dx, -87 - far * 3], 'outBack'], [4.3, [11 + dx, -88 - far * 3]], [5.2, [15, -19 - far], 'inOut'], [7.5, [15.5, -18.5 - far]]]);
+    const hand = K(tt, [[1.45, [35 + far * 3, -29.5 - far * 1.2]], [1.85, [21, -42 - far * 2], 'inOut'], [2.26, [12 + dx, -87 - far * 3], 'outBack'], [4.3, [11 + dx, -88 - far * 3]], [4.85, [29 + dx * 0.3, -60 - far * 2], 'inOut'], [5.35, [17, -21 - far], 'inOut'], [7.5, [16, -19 - far]]]);
     const up = tt > 2.0 && tt < 4.9;
-    P[nm] = { hand: [hand[0] + jig, hand[1] + jig * 0.6], bend: up ? 1 : -1, hp: tt < 1.8 ? { view: 'side', curl: 0.8 } : tt < 2.12 ? { view: 'fist', rot: -1.2 } : up ? { view: 'palm', spread: 0.95, thumb: 0.9, rot: 0.1 } : { view: 'side', curl: 0.3, rot: 0.8 } };
+    P[nm] = { hand: [hand[0] + jig, hand[1] + jig * 0.6], hp: tt < 1.8 ? { view: 'side', curl: 0.8 } : tt < 2.12 ? { view: 'fist', rot: -1.2 } : up ? { view: 'palm', spread: 0.95, thumb: 0.9, rot: 0.1 } : { view: 'side', curl: 0.3, rot: 0.8 } };
   }
   return idle(P, t, { seed: 17, rate: 0.26 });
 }
@@ -303,7 +312,9 @@ function perfSleep(t) {
     P[nm] = { hand, bend: -1, elbowTo: [20.5 + dx * 0.4, -28.4 + dy], elbowK: ek, hp: tt < 4.3 ? { view: 'side', curl: 0.3, rot: 0.8 } : { view: 'back', curl: 0.35, rot: 0 } };
   }
   const deep = t > 6.2;
-  return idle(P, t, { seed: 23, rate: deep ? 0.17 : 0.22, amp: deep ? 1.6 : 1, noBlink: t > 3.8 });
+  const Q = idle(P, t, { seed: 23, rate: deep ? 0.17 : 0.22, amp: deep ? 1.6 : 1, noBlink: t > 3.8 });
+  // once the arms are folded on the desk, his head rests on the forearms (their top ≈ 4.5 cm above the desk)
+  return t > 4.9 ? sideHeadContact(Q, D, -32.6) : Q;
 }
 function sleepShot(t0) {
   const dur = 10.4;
@@ -518,3 +529,4 @@ for (const mk of [keysShot, backScratchShot, frontShot, sideDownShot, cheerShot,
   T0 = s.t1;
 }
 export const { SHOTS, DURATION, renderFrame, shotAt } = makeFilm(shots);
+export { perfSideDown, perfCheer, perfSleep };

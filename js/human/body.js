@@ -68,9 +68,21 @@ function torsoFB(P, D) {
 // arm: returns tube + wrist + forearm direction. A: { hand:[x,y], bend:±1, elbow?, fs (forearm foreshortening), us, w }
 function armGeom(S, A, D, o = {}) {
   const up = D.upper * (A.us ?? 1), fo = D.fore * (A.fs ?? 1);
-  const W = A.hand;
+  // hand target in body space, or relative to the shoulder (hanging / swinging arms follow the torso)
+  let W = A.rel ? [S[0] + A.rel[0], S[1] + A.rel[1]] : A.hand;
+  if (A.hangK > 0) W = lerpP(W, [S[0] + A.hang[0], S[1] + A.hang[1]], Math.min(1, A.hangK));
   let E = A.elbow || ik(S, W, up, fo, A.bend ?? 1).joint;
   if (A.elbowTo && A.elbowK > 0) E = lerpP(E, A.elbowTo, Math.min(1, A.elbowK));
+  if (o.flex) {
+    // never bend the wrong way: if the forearm turns against flexion, mirror the elbow across shoulder→hand
+    const ux = E[0] - S[0], uy = E[1] - S[1], fx = W[0] - E[0], fy = W[1] - E[1];
+    if ((ux * fy - uy * fx) * o.flex < 0) {
+      const lx = W[0] - S[0], ly = W[1] - S[1], L2 = lx * lx + ly * ly || 1;
+      const t = ((E[0] - S[0]) * lx + (E[1] - S[1]) * ly) / L2;
+      const px = S[0] + lx * t, py = S[1] + ly * t;
+      E = [2 * px - E[0], 2 * py - E[1]];
+    }
+  }
   const sw = D.sleeve * (A.w ?? 1);
   const persp = A.persp ?? 1; // forearm closer to the camera looks wider
   const t = tube([S, lerpP(S, E, 0.5), E, lerpP(E, W, 0.55), W], [[0, sw * 1.08], [0.42, sw * 0.95], [0.8, sw * 0.86 * persp], [1, sw * 0.8 * persp]], { capStart: 'round', capStartK: 0.6, capEnd: 'flat', step: 0.9 });
@@ -268,12 +280,26 @@ function deformSide(p, P, D) {
   }
   return [out[0] + P.hipX, out[1] + P.hipY];
 }
-export function drawSide(ctx, P0, D, o = {}) {
+// Side-view rig: the deformation, neck/head frame and shoulder positions for a pose (no drawing).
+export function sideRig(P0, D) {
   const P = pose(P0);
-  const ups = curScale(ctx);
-  const fig = new Fig(ctx, { lw: inkFor(ups), seed: o.seed || 31 });
   const k = D.torsoH / 50;
   const d = (p) => deformSide([p[0], p[1] * (p[1] < 0 ? k : 1)], P, D);
+  const N = d([0.2, -50]);
+  const upAng = spineFrame(P, 1).a;
+  const ndir = -Math.PI / 2 + upAng * 0.95 + (P.head.nod || 0) * 0.3;
+  const nl = 4.6 * (1 - 0.4 * clamp(((P.head.nod || 0) - 0.8) / 1.4));
+  const NT = [N[0] + Math.cos(ndir) * nl + (P.head.dx || 0), N[1] + Math.sin(ndir) * nl + (P.head.dy || 0)];
+  const hang = upAng * 0.75 + (P.head.tilt || 0) + (P.head.nod || 0) * 0.6;
+  const M = headMatrix(NT, hang, D, 1, [-1.6, 9.2]);
+  return { P, d, N, NT, M, S: d([0.6, -44.2]), SF: d([2.2, -45.4]) };
+}
+
+export function drawSide(ctx, P0, D, o = {}) {
+  const R = sideRig(P0, D);
+  const { P, d } = R;
+  const ups = curScale(ctx);
+  const fig = new Fig(ctx, { lw: inkFor(ups), seed: o.seed || 31 });
   // legs (far then near)
   const legs = P.legs;
   for (const far of [true, false]) {
@@ -309,33 +335,47 @@ export function drawSide(ctx, P0, D, o = {}) {
   const sway = P.strings || 0;
   {
     const top = d([7.6, -45.5]);
-    const ang = Math.PI / 2 + sway * 0.35 - (P.bend + P.slump * 0.4) * 0.9;
+    const ang = Math.PI / 2 + sway * 0.35 - (P.bend + P.slump * 0.4) * 0.12;
     const mid = [top[0] + Math.cos(ang - sway * 0.2) * 6, top[1] + Math.sin(ang - sway * 0.2) * 6];
     const end = [top[0] + Math.cos(ang) * 12, top[1] + Math.sin(ang) * 12];
     fig.line(tube([top, mid, end], [[0, 0.5], [1, 0.45]], { capStart: 'flat', capEnd: 'flat', step: 0.6 }).outline, { z: 5, fill: D.strings, lw: 1.5, seed: 33 });
     fig.line(tube([end, [end[0] + Math.cos(ang) * 2.2, end[1] + Math.sin(ang) * 2.2]], [[0, 0.7], [1, 0.65]], { step: 0.5 }).outline, { z: 5.1, fill: '#d8d0c0', lw: 1.5, seed: 34 });
   }
   // neck + head
-  const N = d([0.2, -50]);
-  const upAng = spineFrame(P, 1).a;
-  const ndir = -Math.PI / 2 + upAng * 0.95 + (P.head.nod || 0) * 0.3;
-  const NT = [N[0] + Math.cos(ndir) * 4.6 + (P.head.dx || 0), N[1] + Math.sin(ndir) * 4.6 + (P.head.dy || 0)];
+  const { N, NT, M } = R;
   fig.add('neck', tube([[N[0] - 0.4, N[1] + 2.5], NT], [[0, 3.7], [1, 3.4]], { capEnd: 'flat', capStart: 'flat' }).outline, { fill: D.skin, z: 1.5 });
-  const hang = upAng * 0.75 + (P.head.tilt || 0) + (P.head.nod || 0) * 0.6;
-  const M = headMatrix(NT, hang, D, 1, [-1.6, 9.2]);
   headSide(fig, M, D, P.head, P.face, P.hair, 10, ups * D.headScale);
   // arms: far (behind the body, darker), near (in front)
-  const S = d([0.6, -44.2]);
-  const SF = d([2.2, -45.4]);
-  const armN = { hand: [35, -29.5], bend: -1, hp: { view: 'side', curl: 0.85 }, ...(P.armR || {}) };
-  const armF = { hand: [38, -30.8], bend: -1, hp: { view: 'side', curl: 0.85 }, ...(P.armL || {}) };
-  if (!armF.hidden) addArm(fig, 'armF', SF, armF, D, armF.z === 'front' ? 22 : -10, { fill: D.hoodieShade, skin: D.skinShade, foldColor: D.hoodieDeep, edge: armF.z === 'front' });
+  const { S, SF } = R;
+  const armN = { hand: [35, -29.5], hp: { view: 'side', curl: 0.85 }, ...(P.armR || {}) };
+  const armF = { hand: [38, -30.8], hp: { view: 'side', curl: 0.85 }, ...(P.armL || {}) };
+  // anatomy: facing +x, an elbow can only flex one way (forearm rotates toward the front of the upper arm)
+  if (!armF.hidden) addArm(fig, 'armF', SF, { ...armF, bend: -1 }, D, armF.z === 'front' ? 22 : -10, { fill: D.hoodieShade, skin: D.skinShade, foldColor: D.hoodieDeep, edge: armF.z === 'front', flex: -1 });
   if (o.desk) o.desk(fig, 15);
-  addArm(fig, 'armN', S, armN, D, armN.z === 'back' ? -8 : 20);
+  addArm(fig, 'armN', S, { ...armN, bend: -1 }, D, armN.z === 'back' ? -8 : 20, { flex: -1 });
   if (o.extra) o.extra(fig, { d, S, N });
   if (o.lights) for (const L of o.lights) fig.edgeLight(L);
   fig.draw();
   return { fig };
+}
+
+// rough outline of the head in the side view (face profile + hair), head-local units
+const SIDE_HEAD_HULL = [[0.5, -12.6], [5, -11.8], [7.9, -9.2], [9.1, -5.6], [9.2, -3.3], [8.9, -1.6], [9.5, 0.6], [10.9, 2.5], [10.2, 3.5], [9.1, 3.9], [9.3, 5.4], [9.0, 6.5], [9.1, 7.6], [8.4, 9.4], [6.9, 10.9], [4.2, 11.5],
+  [8.8, -9.4], [6.8, -13.1], [2.5, -15.8], [-3, -16.2], [-8, -14], [-11.7, -9.2], [-12.7, -3], [-11.9, 3], [-9.7, 7.8]];
+export function sideHeadLowest(P, D) {
+  const R = sideRig(P, D);
+  let lo = null;
+  for (const q of SIDE_HEAD_HULL) { const p = ap(R.M, q); if (!lo || p[1] > lo[1]) lo = p; }
+  return lo;
+}
+// keep the head from sinking below a surface at height yTop (body y) by easing off `bend`
+export function sideHeadContact(P, D, yTop, soft = 0.25) {
+  const lo = sideHeadLowest(P, D);
+  if (lo[1] <= yTop - soft) return P;
+  let a = -0.5, b = P.bend;
+  for (let i = 0; i < 18; i++) { const m = (a + b) / 2; if (sideHeadLowest({ ...P, bend: m }, D)[1] > yTop) b = m; else a = m; }
+  // soft landing: blend so the constraint engages smoothly as the head approaches
+  return { ...P, bend: a };
 }
 
 export function drawHuman(ctx, view, P, D, o = {}) {
