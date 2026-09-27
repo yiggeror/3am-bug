@@ -25,7 +25,7 @@ for (let i = 0; i + 1 < cuts.length; i++) {
   const file = `part${i + 1}.mp4`;
   const dst = path.join(media, file);
   const input = ['-framerate', String(FPS), '-start_number', String(f0), '-i', path.join(frames, '%06d.jpg'), '-frames:v', String(f1 - f0)];
-  const enc = ['-vf', 'scale=1280:720:flags=lanczos', '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-g', '48',
+  const enc = ['-vf', 'scale=1280:720:flags=lanczos,hqdn3d=1:1:4:4', '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-g', '48',
     '-b:v', `${kbps}k`, '-maxrate', `${Math.round(kbps * 1.6)}k`, '-bufsize', `${kbps * 2}k`];
   const log = path.join(root, 'production/build/x264site');
   ff([...input, ...enc, '-pass', '1', '-passlogfile', log, '-an', '-f', 'null', '-']);

@@ -202,7 +202,11 @@ h1 .b { color: var(--orange); }
     return v;
   }
   function play() {
-    if (!started) { started = true; stage.classList.add('started'); audio.currentTime = seekT; }
+    if (!started) {
+      started = true; stage.classList.add('started');
+      const go = () => { try { audio.currentTime = seekT; } catch (e) {} };
+      if (audio.readyState >= 1) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
+    }
     playing = true;
     audio.play().catch(() => {});
     show(partAt(now()), now());
@@ -212,7 +216,7 @@ h1 .b { color: var(--orange); }
   function seek(t) {
     t = Math.min(D - 0.05, Math.max(0, t));
     seekT = t;
-    if (started) audio.currentTime = t;
+    if (started) { try { audio.currentTime = t; } catch (e) {} }
     show(partAt(t), t);
     draw(t);
   }
