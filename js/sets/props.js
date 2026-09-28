@@ -49,10 +49,6 @@ export function monitorSide(ctx, o = {}) {
   fig.add('neck', [[3.2, -1.2], [5.6, -1.2], [5.4, -27], [3.0, -27]], { fill: '#aca397', z: -0.5 });
   fig.add('back', [[0.8, -18.5], [4.4, -22], [4.8, -38], [1.0, -42.5]], { fill: '#3e3b37', z: 0.5 });
   fig.add('panel', [[-1.5, -12.4], [1.4, -12.4], [1.6, -47.2], [-1.3, -47.2]], { fill: '#2f2d2a', z: 1 });
-  // sticky notes stuck along the top edge, sticking up
-  for (const [dx, col, a] of (o.notes || [[-0.2, '#f6d365', -0.12], [0.3, '#f5a3a0', 0.1]])) {
-    fig.add('note' + col, [[-1.4 + dx, -47], [-1.9 + dx + a * 4, -51.2], [-0.7 + dx + a * 4, -51.4], [-0.2 + dx, -47]], { fill: col, z: 2, edge: true });
-  }
   fig.draw();
 }
 

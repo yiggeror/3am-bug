@@ -5,7 +5,7 @@
 ## Picture · 画面
 - All drawing, animation, lighting and camera work are original and generated frame by frame by the code in `js/` (Canvas 2D).
 - The little orange friend (小橙块) is fan art of the Claude Code mascot (© Anthropic), drawn after the character sheet supplied for this project. It is unofficial and not affiliated with or endorsed by Anthropic.
-- The programmer, the room and the bug are original characters. The room is the same one as in 《关闭电脑之后》 (*After the Laptop Closes*, [yiggeror/small-claude](https://github.com/yiggeror/small-claude)).
+- The programmer, the room and the bug are original.
 
 ## Music · 配乐
 - Original score, composed in code (`production/audio/score.py`) and rendered with **FluidSynth** using the **FluidR3 GM** soundfont by Frank Wen (MIT licence).
@@ -23,8 +23,6 @@ These are synthesized in code (`production/audio/synth.py`):
 - the bug's skitter and chitter
 - everything that only exists inside the code world: the digital hum, the glitches, the splash into the text, the searchlight, the lantern bell, the error buzz, the gate clang, the success chime and the tape stop
 - his breathing, the heartbeat and the computer's fan
-
-**Reused from 《关闭电脑之后》 (small-claude):**
 
 | Clip(s) | Source | Licence | Link |
 |---|---|---|---|
@@ -48,11 +46,6 @@ These are synthesized in code (`production/audio/synth.py`):
 | pen_roll | "Pencil rolling of Desk and landing" by balloonhead | CC0 | https://freesound.org/people/balloonhead/sounds/443445/ |
 | soft_land1, soft_land2, soft_heavy, punch, plate_tap2, wood_tap | Kenney, *impact-sounds* pack | CC0 | https://kenney.nl/assets/impact-sounds |
 | cloth_k, creak | Kenney, *rpg-audio* pack | CC0 | https://kenney.nl/assets/rpg-audio |
-
-**New for this film:**
-
-| Clip(s) | Source | Licence | Link |
-|---|---|---|---|
 | birds (dawn) | "Dawn chorus.wav" by Synge101 | CC0 | https://freesound.org/people/Synge101/sounds/611453/ |
 | rewind (Ctrl+Z) | "Tape recorder rewind (Fanmade)" by simplewave | CC0 | https://freesound.org/people/simplewave/sounds/372876/ |
 | jar_close | "Opening & closing the lid on a glass jar 3" by randbsoundbites | CC0 | https://freesound.org/people/randbsoundbites/sounds/829781/ |

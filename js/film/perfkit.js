@@ -50,7 +50,7 @@ export function strokes(t, seed, t0, t1, cps = 7) {
 export function room(t, o = {}) {
   const rgb = screenLight(t);
   return {
-    t, tod: todAt(t), clock: clockAt(t), cups: cupsAt(t), lamp: 1, screen: o.screenK ?? 1, notes: 6,
+    t, tod: todAt(t), clock: clockAt(t), cups: cupsAt(t), lamp: 1, screen: o.screenK ?? 1,
     screenRGB: rgb.join(','),
     screenDraw: (c) => screenContent(c, t, o.scr || {}),
     ...o.S,

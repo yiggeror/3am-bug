@@ -88,17 +88,6 @@ export function drawBackSet(ctx, S, cam, o = {}) {
       c.restore();
       if ((S.screen ?? 1) < 1) { c.fillStyle = `rgba(0,0,0,${1 - (S.screen ?? 1)})`; c.fillRect(0, 0, m.x1 - m.x0, m.y1 - m.y0); }
     });
-    // sticky notes on the bezel
-    const notes = S.notes ?? 6;
-    const NOTE = [[m.x0 - 1.6, m.y1 - 1.2, -0.12, '#f6d365', 'fix it'], [m.x1 - 3, m.y1 + 1.6, 0.1, '#f5a3a0', '喝水'], [m.x1 + 1.4, m.y1 - 8, -0.06, '#a8d8b0', 'sleep?'], [m.x0 - 1.8, m.y1 - 8.5, 0.08, '#9fd0f0', ':)'], [m.x0 + 7, m.y1 + 1.8, -0.04, '#f6d365', 'TODO'], [m.x1 + 1.6, m.y1 - 15, 0.12, '#f6d365', '别慌']];
-    NOTE.slice(0, notes).forEach(([x, y, a, col, s], i) => billboard(ctx, cam, x, y, m.z - 0.3, (c, p) => {
-      c.save(); c.rotate(a);
-      const fig = new Fig(c, { lw: inkFor(p.s) * 0.7, seed: 850 + i });
-      fig.add('n', [[-2.5, -2.5], [2.5, -2.5], [2.6, 2.4], [-2.4, 2.6]], { fill: col, z: 0, sharp: true });
-      fig.after((cc) => text(cc, s, 0, 0.2, { size: s.length > 3 ? 1.25 : 1.6, font: /[a-z:)?]/i.test(s) ? HAND_FONT : ZH_FONT, color: '#3b3530' }), 1);
-      fig.draw();
-      c.restore();
-    }));
   }, 1);
   // keyboard: plate + keys at true depth
   {

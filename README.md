@@ -11,7 +11,6 @@ A 4 min 56 s animated short with no dialogue. Every frame is drawn in code.
 
 At 2:50 a.m. his tests fail again, and again. The little orange friend who lives in his terminal dives into
 the code to hunt the bug. Every command he types outside becomes something it can use inside. By dawn, everything is green.
-It is set in the same room as [《关闭电脑之后》 *After the Laptop Closes*](https://github.com/yiggeror/small-claude).
 
 ## Watch · 观看
 
