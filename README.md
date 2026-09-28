@@ -14,10 +14,12 @@ the code to hunt the bug. Every command he types outside becomes something it ca
 
 ## Watch · 观看
 
-- **`site/`**: the web player. It plays the film with sound and has a progress bar with chapters, fullscreen
+- **`site/`**: the web player (it still plays the earlier cut, with the title card and the first score). It plays the film with sound and has a progress bar with chapters, fullscreen
   and keyboard shortcuts, and it works on phones. Serve the folder with any static server
   (`python3 -m http.server -d site`) and open it. It plays 720p video parts locked to one continuous soundtrack.
-- **`film/3am-bug-1080p-part1.mp4` + `part2.mp4`**: the full film at 1080p24 with AAC audio, split at 2:27.4
+- **`film/3am-bug-title-1080p.mp4`** (with its own little cue) and **`film/3am-bug-title-sfx-1080p.mp4`** (effects only): the
+  6.6-second title card, kept separate. The film itself opens on black and fades up into the room.
+- **`film/3am-bug-1080p-part1.mp4` + `part2.mp4`**: the film at 1080p24 (4:49) with AAC audio, split at 2:27.4
   on a hard cut because of GitHub's 100 MB file limit. Play them one after the other, or join them without
   re-encoding:
   `ffmpeg -f concat -safe 0 -i <(printf "file '$PWD/film/3am-bug-1080p-part%s.mp4'\n" 1 2) -c copy 3am-bug-1080p.mp4`
@@ -41,7 +43,7 @@ sheets used for review and every frame of the video.
 
 - **Cues**: `production/tools/export_cues.mjs` exports every keystroke from the same functions that move his fingers, plus every landing, take-off, run and skitter from the choreography, the gates, the error blocks, the glitch flickers and the shot list.
 - **Mix**: `production/audio/mix.py` places sounds on those times. The ambience follows the picture: the room when we are with him, a muffled room and a digital hum inside the code. His keystrokes reach the code world as distant thunder, and Ctrl+Z plays the error rain backwards. The mix adds the little friend's synthesized voice, the room and the code-world reverb, and a master stage.
-- **Score**: `production/audio/score.py` is an original score written per section and rendered with FluidSynth using FluidR3 GM. The 3 A.M. theme is in D minor and returns in D major at the green. The little friend has a theme in F major, the bug has a chromatic tiptoe, and the code world has a Lydian shimmer.
+- **Score**: `production/audio/score.py` is an original score with one tune and two timbres. In his room a small acoustic band plays it: nylon guitar, vibraphone, upright bass and brushes, rendered with FluidSynth and FluidR3 GM. Inside the code the same arrangement is played on a chiptune set synthesized in the script: pulse lead, pulse arpeggios, triangle bass and noise drums. The mix switches between the two on every cut. It stays in F major and stays light: failures get a small shrug, and the fix gets a cheerful groove rather than a fanfare. The little friend has a bouncy arpeggio, the bug has a chromatic tiptoe, and the code world has an F Lydian shimmer.
 - **Recordings**: all are CC0 (see [`CREDITS.md`](CREDITS.md)). The prepared clips ship in `production/audio/clips/`.
 
 ## Rebuild · 重新生成
@@ -55,7 +57,7 @@ Requirements:
 ```sh
 npm install
 node production/tools/export_cues.mjs                        # beats, shots, keystrokes, choreography → production/build/cues.json
-python3 production/audio/score.py                            # score → production/build/music.wav
+python3 production/audio/score.py                            # score → production/build/music_room.wav + music_chip.wav
 python3 production/audio/mix.py                              # full mix → production/build/soundtrack.wav
 node production/tools/render_video.cjs --frames-only 1       # 7104 frames → production/build/frames_index/
 production/tools/encode_all.sh                               # film/*.mp4 and the 720p / segment versions

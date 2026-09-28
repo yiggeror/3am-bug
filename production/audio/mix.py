@@ -101,7 +101,7 @@ ROOM_G = {'room': 0, 'keys': -2, 'screen': -5, 'cw': -16, 'card': None}
 def room_gain(off=0.0):
     def f(t):
         k = kind_at(t)
-        if k == 'card': return db(-12) if t < T['titleEnd'] else 0.0
+        if k == 'card': return 0.0 if t < T['titleEnd'] else 0.0
         return db(ROOM_G[k] + off)
     return f
 
@@ -200,11 +200,11 @@ def s1_night():
     # the scratch
     scr = lambda d, seed: S.bandpass(np.random.default_rng(seed).standard_normal(int(d * SR)), 1500, 6000) * np.abs(np.sin(2 * np.pi * 2.07 * np.arange(int(d * SR)) / SR))
     ev(9.9, 'cloth_k', -34); ev(10.0, S.norm(scr(1.6, 1), 0.5), -34, rev=0.05)
-    ev(17.4, S.error_buzz(0.35, 98), -34, lpf=1400, pan=0.2)                  # red again
-    ev(17.45, S.voice('eep', 3), -34, lpf=3000, pan=0.3)                         # the little friend flinches (on screen)
+    ev(17.4, S.soft_error(520, 1), -34, pan=0.2)                               # red again (a soft blip, not an alarm)
+    ev(17.45, S.voice('eep', 3), -38, lpf=3000, pan=0.3)                         # the little friend flinches (on screen)
     ev(18.45, 'sigh', -30, rate=0.95)
-    ev(23.72, S.error_buzz(0.35, 92), -26, lpf=1600)
-    ev(23.75, S.voice('eep', 4), -26)
+    ev(23.72, S.soft_error(480, 2), -30)
+    ev(23.75, S.voice('eep', 4), -32)
     # hands into his hair
     ev(28.4, 'cloth', -32, maxlen=0.6, fout=0.2); ev(28.95, 'cloth_k', -28); ev(28.95, S.norm(scr(1.6, 2), 0.5), -32)
     ev(30.9, 'cloth', -34, maxlen=0.5, fout=0.2); ev(31.3, S.breath(1.1, False, 3), -30)
@@ -245,7 +245,7 @@ def s2_dive():
 
 def s3_together():
     for g in DATA['glitches']:
-        ev(g['t'], S.glitch(0.12 + 0.1 * g['k'], int(g['t'] * 10)), -30 + 8 * g['k'], pan=0.35, lpf=6000)
+        ev(g['t'], S.glitch(0.12 + 0.1 * g['k'], int(g['t'] * 10)), -34 + 6 * g['k'], pan=0.35, lpf=5000)
     ev(85.21, 'creak', -20, rate=0.9); ev(85.2, 'cloth_k', -24); ev(85.18, S.breath(0.35, True, 5), -24)
     ev(89.5, S.skitter(0.8, 30, 4), -44, pan=-0.2); ev(91.0, S.skitter(1.6, 30, 5), -38)
     ev(91.2, S.chitter(3, 3, 2600), -40); ev(92.0, S.voice('hmph', 16), -40)
@@ -270,7 +270,7 @@ def s3_together():
     for b in DATA['blocks']:
         dt = b['t'] - 134.6 + 0.45
         rain.add('soft_heavy' if not b['hitsCube'] else 'punch', dt, -18 if b['hitsCube'] else -22, rate=1.0 + 0.1 * (len(b['txt']) % 3))
-        rain.add(S.error_buzz(0.28, 90 + 13 * (len(b['txt']) % 5)), dt, -28)
+        rain.add(S.soft_error(440 + 40 * (len(b['txt']) % 5), 3), dt, -32)
     x = rain.L + rain.R
     ev(134.6, x, 0, big=0.3)
     ev(T['hit'] + 0.05, S.voice('ow', 23), -26, big=0.3)
@@ -298,8 +298,8 @@ def s4_closing():
     ev(180.0, 'wood_tap', -34, rate=0.7); ev(180.2, 'cloth', -38, maxlen=0.4, fout=0.2)
     for tb, f0 in ((182.0, 220), (186.0, 196)):
         ev(tb + 0.4, 'mouse_click', -22)
-        ev(tb + 0.5, S.clang(int(tb), f0), -18, big=0.5); ev(tb + 0.5, 'soft_heavy', -23, rate=0.7, big=0.3)
-    ev(190.0, S.spot_on(), -18, big=0.35)
+        ev(tb + 0.5, S.clang(int(tb), f0), -23, big=0.4); ev(tb + 0.5, 'soft_heavy', -27, rate=0.7, big=0.3)
+    ev(190.0, S.spot_on(), -25, big=0.3)
     M.track(np.concatenate([np.zeros(int(190.2 * SR), np.float32), S.light_hum(17.6)]), envelope(lambda t: db(-32) if kind_at(t) == 'cw' else db(-46)), big=0.2)
     ev(190.1, 'boing', -24, rate=1.6, big=0.3); ev(190.15, S.voice('eep', 31), -30, big=0.3)
     for t in (191.2, 192.5, 193.9, 195.3): ev(t, S.squeak(1600, 2400, 0.07), -34, big=0.3)
@@ -308,11 +308,11 @@ def s4_closing():
     for k in range(3): ev(204.25 + k * 0.12, S.tap(40 + k, 1.8), -34, big=0.2)
     ev(204.45, 'plate_tap2', -34, rate=2.0, big=0.2)
     ev(205.55, S.voice('mm', 33), -32, big=0.3)
-    ev(206.55, S.voice('effort', 34), -20, big=0.3); ev(206.6, 'whoosh', -19, rate=0.9, big=0.3)
+    ev(206.55, S.voice('effort', 34), -20, big=0.3); ev(206.6, 'whoosh', -24, rate=0.9, big=0.25)
     ev(207.0, S.shimmer(0.4, False, 3), -28, big=0.3); ev(207.1, S.squeak(1800, 3000, 0.1), -24, big=0.3)
-    ev(207.25, 'punch', -19, big=0.35); ev(207.3, 'soft_heavy', -22, rate=1.2, big=0.3); ev(207.4, 'cloth_k', -30, rate=1.5)
-    ev(207.7, S.sparkle(1.2, 12, 12, 2500, 6000), -24, big=0.4); ev(207.75, S.bell(1568, 2.0), -28, big=0.4)
-    ev(208.6, S.voice('yay', 35), -20, big=0.3)
+    ev(207.25, 'punch', -25, big=0.3); ev(207.3, 'soft_heavy', -28, rate=1.2, big=0.25); ev(207.4, 'cloth_k', -30, rate=1.5)
+    ev(207.7, S.sparkle(1.0, 12, 8, 2500, 6000), -32, big=0.3)
+    ev(208.6, S.voice('yay', 35), -25, big=0.3)
     ev(210.95, 'cloth_k', -30); ev(211.0, S.breath(0.4, False, 8), -30)
     ev(212.5, 'soft_land1', -30, rate=1.4)
     for k in range(3): ev(212.7 + k * 0.22, S.breath(0.18, False, 9 + k), -34)
@@ -322,8 +322,7 @@ def s5_green():
     ev(219.25, S.heartbeat(4, 84), -30)                  # the hesitation over Enter
     # lines of passing tests appear
     for k in range(10): ev(T['green'] + 0.1 + k * 0.45, S.ui_tick(2200 + 80 * k), -34)
-    ev(T['green'] + 0.05, S.success(), -17)
-    ev(T['green'] + 0.3, S.sparkle(2.0, 21, 16, 2500, 6500), -26)
+    ev(T['green'] + 0.3, S.sparkle(1.2, 21, 8, 2500, 6000), -34)
     for k, t in enumerate([221.6, 222.3, 223.0, 223.7]): ev(t, S.voice('yay', 40 + k), -36)
     ch = 227.0
     ev(ch + 1.75, S.breath(0.45, True, 11), -26)
@@ -355,23 +354,33 @@ def s6_dawn():
     for k in range(len(msg['text'])): ev(msg['t0'] + k / msg['rate'], S.boop(760 + 60 * ((k * 5) % 7)), -26)
     ev(270.6, S.voice('yawn', 51), -28)
 
+def stem_weights(t):
+    """(room, chip): the acoustic band in his room, the chiptune band inside the code"""
+    k = kind_at(t)
+    r, c = {'room': (1.0, 0.0), 'keys': (1.0, 0.0), 'screen': (0.3, 0.9), 'cw': (0.0, 1.0), 'card': (0.0, 0.0)}[k]
+    if 82.0 <= t < 85.3: c = max(c, 0.5)                    # the glitch leaks out of the screen
+    if 160.0 <= t < 178.0: r, c = max(r, 0.4), max(c, 0.45)  # the quiet moment: both, softly
+    if 221.0 <= t < 235.0 or t >= T['credits']: r, c = 1.0, 0.8   # all green, and the credits: everyone plays
+    return r, c
+
 def music():
-    fn = os.path.join(BUILD, 'music.wav')
-    if not os.path.exists(fn): print('no music.wav yet'); return
-    x, sr = sf.read(fn, dtype='float32'); assert sr == SR
-    n = min(len(x), M.n)
+    room, sr = sf.read(os.path.join(BUILD, 'music_room.wav'), dtype='float32'); assert sr == SR
+    chip, _ = sf.read(os.path.join(BUILD, 'music_chip.wav'), dtype='float32')
     g = envelope(lambda t: db(MUSIC_G(t)), ramp=0.25)
-    M.L[:n] += x[:n, 0] * g[:n]; M.R[:n] += x[:n, 1] * g[:n]
+    wr = envelope(lambda t: stem_weights(t)[0], ramp=0.05)
+    wc = envelope(lambda t: stem_weights(t)[1], ramp=0.05)
+    for x, w, big in ((room, wr, 0.0), (chip, wc, 0.12)):
+        n = min(len(x), M.n)
+        M.L[:n] += x[:n, 0] * g[:n] * w[:n]; M.R[:n] += x[:n, 1] * g[:n] * w[:n]
+        if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * g[:n] * w[:n] * big
 
 def MUSIC_G(t):
-    # overall level, a touch lower under dense sound design / close keyboard shots
-    g = 6.0
-    if kind_at(t) == 'keys': g -= 3
+    g = 5.0
+    if kind_at(t) == 'keys': g -= 2
     if 131.4 < t < 139: g -= 2
-    if T['credits'] <= t: g += 2
     return g
 
-def master(out):
+def master(out, fade_in=None, target=-18.0, gain_db=None):
     irL, irR = room_ir(0.4, 1.0, 4500, 1)
     bL, bR = room_ir(1.6, 3.0, 7000, 2)
     for send, (a, b), gain in ((M.rev, (irL, irR), 0.6), (M.big, (bL, bR), 0.9)):
@@ -379,22 +388,46 @@ def master(out):
             M.L += signal.fftconvolve(send, a)[:M.n].astype(np.float32) * gain
             M.R += signal.fftconvolve(send, b)[:M.n].astype(np.float32) * gain
     st = np.stack([M.L, M.R], 1)
+    if fade_in:
+        a0, a1 = int(fade_in[0] * SR), int(fade_in[1] * SR)
+        st[:a0] = 0; st[a0:a1] *= np.linspace(0, 1, a1 - a0)[:, None] ** 1.5
     b, a = signal.butter(2, 28 / (SR / 2), 'high'); st = signal.lfilter(b, a, st, axis=0).astype(np.float32)
     blk = int(0.4 * SR)
     rms = np.sqrt(np.array([np.mean(st[i:i + blk] ** 2) for i in range(0, len(st) - blk, blk)]) + 1e-12)
     loud = rms[rms > db(-50)]
     integ = 20 * np.log10(np.sqrt(np.mean(loud ** 2)))
-    st *= db(-18.0 - integ)
+    applied = gain_db if gain_db is not None else target - integ
+    st *= db(applied)
     thr = db(-1.5)
     st = np.where(np.abs(st) > thr * 0.7, np.sign(st) * (thr * 0.7 + (thr * 0.3) * np.tanh((np.abs(st) - thr * 0.7) / (thr * 0.3))), st)
     # fade the very end
     f = int(1.0 * SR); st[-f:] *= np.linspace(1, 0, f)[:, None]
     sf.write(out, st, SR, subtype='PCM_24')
-    print('master →', out, f'integrated≈{integ:.1f} dB → -18 dB, peak {20 * np.log10(np.abs(st).max()):.1f} dBFS')
+    print('master →', out, f'integrated≈{integ:.1f} dB, gain {applied:+.1f} dB, peak {20 * np.log10(np.abs(st).max()):.1f} dBFS')
+    return applied
+
+def title_clip(with_music):
+    """the title card on its own: typing, the little friend hopping on — with its own little cue, or effects only"""
+    global M
+    M = Mix(7.0)
+    M.bed_room = None
+    room = loop_to(sfxlib.get('room_lit'), M.n, offset=3)
+    M.track(room, np.full(M.n, db(-46), np.float32))
+    title()
+    if with_music:
+        for fn, big in (('title_room.wav', 0.0), ('title_chip.wav', 0.12)):
+            x, _ = sf.read(os.path.join(BUILD, fn), dtype='float32'); n = min(len(x), M.n)
+            M.L[:n] += x[:n, 0] * db(5.0); M.R[:n] += x[:n, 1] * db(5.0)
+            if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * db(5.0) * big
+    # fade out with the picture (5.7 → 6.6 s)
+    a, b = int(5.7 * SR), int(6.6 * SR)
+    for ch in (M.L, M.R, M.rev, M.big): ch[a:b] *= np.linspace(1, 0, b - a); ch[b:] = 0
+    master(os.path.join(BUILD, 'title_music.wav' if with_music else 'title_sfx.wav'), gain_db=FILM_GAIN)
 
 if __name__ == '__main__':
     import sys
     ambience(); keys(); code_world()
-    title(); s1_night(); s2_dive(); s3_together(); s4_closing(); s5_green(); s6_dawn()
+    s1_night(); s2_dive(); s3_together(); s4_closing(); s5_green(); s6_dawn()
     if '--no-music' not in sys.argv: music()
-    master(os.path.join(BUILD, 'soundtrack.wav'))
+    FILM_GAIN = master(os.path.join(BUILD, 'soundtrack.wav'), fade_in=(T['wide1'] + 0.05, T['wide1'] + 2.6))
+    title_clip(True); title_clip(False)

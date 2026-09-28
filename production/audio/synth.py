@@ -243,3 +243,12 @@ def heartbeat(n=6, bpm=80):
             t0 = i * beat + off; m = t >= t0; u = t[m] - t0
             x[m] += a * np.sin(2 * np.pi * 55 * u) * np.exp(-u * 22)
     return norm(lowpass(x, 200), 0.8)
+
+def soft_error(f0=520, seed=0):
+    """a failed test, said gently: two soft round blips stepping down (no buzz, no alarm)"""
+    out = []
+    for k, f in enumerate((f0, f0 * 0.75)):
+        t = tt(0.14)
+        x = np.sin(2 * np.pi * f * t) + 0.25 * np.sin(2 * np.pi * 2 * f * t)
+        out += [x * np.minimum(1, t / 0.006) * np.exp(-t * 18), np.zeros(int(0.03 * SR))]
+    return norm(lowpass(np.concatenate(out), 2500), 0.6)

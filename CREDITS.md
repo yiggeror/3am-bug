@@ -8,7 +8,7 @@
 - The programmer, the room and the bug are original.
 
 ## Music · 配乐
-- Original score, composed in code (`production/audio/score.py`) and rendered with **FluidSynth** using the **FluidR3 GM** soundfont by Frank Wen (MIT licence).
+- Original score, composed in code (`production/audio/score.py`). The acoustic band is rendered with **FluidSynth** using the **FluidR3 GM** soundfont by Frank Wen (MIT licence). The chiptune band is synthesized by the same script.
 
 ## Fonts · 字体 (SIL Open Font License 1.1)
 - **Patrick Hand** by Patrick Wagesreiter (`fonts/OFL-PatrickHand.txt`)

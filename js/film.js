@@ -52,7 +52,7 @@ export function makeFilm(shots) {
     }
     if (shot.overlay) { ctx.save(); ctx.setTransform(...base); shot.overlay(ctx, t, t - shot.t0); ctx.restore(); }
     let a = 0;
-    if (shot.fadeIn) a = Math.max(a, 1 - clamp((t - shot.t0) / shot.fadeIn));
+    if (shot.fadeIn) a = Math.max(a, 1 - clamp((t - shot.t0 - (shot.fadeInDelay || 0)) / shot.fadeIn));
     if (shot.fadeOut) a = Math.max(a, clamp((t - (shot.t1 - shot.fadeOut)) / shot.fadeOut));
     if (a > 0.001) { ctx.save(); ctx.setTransform(...base); ctx.globalAlpha = a; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1920, 1080); ctx.restore(); }
     return shot;

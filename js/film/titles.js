@@ -62,7 +62,7 @@ function title(t0, t1) {
       drawCube2(ctx, S);
       setEmoteInk(null);
     }
-  }, { fadeIn: 0.6, noPost: true });
+  }, { fadeIn: 0.6, fadeOut: 0.9, noPost: true });
 }
 
 // ------------------------------------------------------------------ credits
@@ -72,7 +72,7 @@ const CREDITS = [
   ['r', '一部完全由代码逐帧绘制的动画短片', 'A short film drawn frame by frame in code'],
   ['gap'],
   ['r', '人物、小方块、小虫子、房间与代码世界', 'Characters, sets & the code world — Canvas 2D, rendered in headless Chromium'],
-  ['r', '音乐：按段落编写的配乐（FluidSynth · FluidR3 GM）', 'Score written per section, rendered with FluidSynth'],
+  ['r', '音乐：原创配乐 · 房间里是木吉他和颤音琴，代码里是芯片音色', 'Original score: acoustic in the room, chiptune in the code (FluidSynth + synthesis)'],
   ['r', '音效：CC0 素材 + 程序合成', 'Sound effects: CC0 recordings + synthesis (see CREDITS.md)'],
   ['r', '字体：ZCOOL KuaiLe · Patrick Hand · JetBrains Mono（SIL OFL）', 'Fonts under the SIL Open Font License'],
   ['gap'],

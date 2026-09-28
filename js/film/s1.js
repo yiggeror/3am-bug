@@ -54,7 +54,7 @@ function wide1(t0, t1) {
     const k = ease.inOut(clamp((t - t0) / (t1 - t0)));
     const cam = new Cam({ x: lerp(66, 50, k), y: lerp(150, 140, k), z: lerp(-215, -170, k), f: 1180, hy: lerp(405, 428, k) });
     drawBackSet(ctx, { ...room(t), human: { P, D, lights: lightsBack(t) } }, cam);
-  }, { fadeIn: 1.2, dissolve: 0.8 });
+  }, { fadeInDelay: 0.5, fadeIn: 2.6 });
 }
 
 // over-the-shoulder camera: an off-axis lens (no yaw) keeps the screen a true rectangle.
