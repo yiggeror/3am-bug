@@ -1,21 +1,36 @@
-"""Original score for 《凌晨三点的 Bug》 (The 3 A.M. Bug), second version.
+"""Original score for 《凌晨三点的 Bug》 (The 3 A.M. Bug), third version.
 
-One tune, two timbres. In his room the music is a small acoustic band: nylon guitar, vibraphone, upright bass and
-brushes, with a clarinet, a flute and pizzicato for colour. Inside the code the same arrangement is played on a
-chiptune set synthesized here: pulse lead, 12.5% pulse arpeggios, triangle bass, noise drums. The mix
-(production/audio/mix.py) switches between the two stems on every cut, so the same melody changes clothes when we go
-through the screen.
+Written like a film score: eight continuous cues, each with one tempo, one groove and one band, beginning and ending on
+story turns rather than on cuts. Inside a cue the accompaniment never stops; it changes only on 4-bar phrase
+boundaries, and the story's big moments (the gates, the pounce, the collapse) are placed on downbeats and marked with
+a single accent over the groove. Between cues there is silence, and every cue is clamped so it never rings on under
+the next one.
 
-Everything stays in F major and stays light. Failures get a small deflating shrug. The fix and the green get a
-cheerful little groove, with no fanfare, strings swell or big hits.
+The band: a small acoustic group (nylon guitar, vibraphone, upright bass, brushes, with a clarinet and a flute) rendered
+with FluidSynth, and a chiptune set synthesized here (pulse lead, 12.5% pulse arpeggios, triangle bass, noise drums)
+for the little friend and the code world. Both are summed at fixed weight: no switching per shot.
+
+Everything stays in F major and stays light. Failures get a small shrug. The fix and the green get a cheerful groove,
+with no fanfare, strings swell or big hits.
+
+  A  02:50            7.0 – 53    84 bpm   acoustic trio; thins out as he gives up
+  B  into the code   58.0 – 82   120 bpm   chiptune: the decision and leap · the code world · the bug and the chase
+  C  working together 88.9 – 135.9 105 bpm both bands: search · lunge and log · lantern and maze · eager → collapse
+  D1 try again      147.4 – 159  120 bpm   chiptune, lighter
+  D2 quiet          160.4 – 178.6 66 bpm   guitar and vibes
+  E  closing in     179.0 – 218.6 120 bpm  one sneaky groove; gates and the pounce on downbeats; relief
+  F  all green      221.0 – 245   108 bpm  the tune, happily; the jar
+  G  dawn · goodnight 245.4 – 281 70 bpm   guitar and flute; the goodnight message typed in chip notes
+  I  credits        281.4 – 296  116 bpm   the whole band
 
 Material
   · Theme — a whistleable tune over Fmaj9 | Dm9 | Gm9 | C13sus (and a bridge over Bbmaj7 | Am7 | Gm9 | C7sus)
   · the little friend — a bouncy arpeggio that jumps up (C–F–A … G–A–C)
   · the bug — a chromatic tiptoe that plops back down
-  · the code world — F Lydian: Fmaj9#11 and G/F, slow and sparkly
+  · the code world — F Lydian: Fmaj9#11 and G/F
 
-Outputs (production/build/): music_room.wav, music_chip.wav (the film), title_room.wav, title_chip.wav (the title clip).
+Outputs (production/build/): music_room.wav and music_chip.wav (the film, level-matched), title_room.wav and
+title_chip.wav (the separate title clip).
 """
 import json, os, subprocess
 import numpy as np
@@ -50,7 +65,7 @@ rnd = np.random.default_rng(3)
 class Arr:
     def __init__(self): self.ev = []; self.drprog = []
     def n(self, t, dur, pitch, vel, inst, bus='film', glide=0):
-        self.ev.append(dict(t=float(t), d=max(0.03, float(dur)), p=p(pitch), v=int(max(1, min(127, vel))), i=inst, bus=bus, g=glide))
+        self.ev.append(dict(t=float(t), d=max(0.03, float(dur)), p=p(pitch), v=int(max(1, min(127, vel))), i=inst, bus=bus, g=glide, cue=getattr(self, 'cue', None)))
     def ch(self, t, dur, notes, vel, inst, bus='film', roll=0.0):
         for k, q in enumerate(notes.split() if isinstance(notes, str) else notes):
             self.n(t + k * roll, dur - k * roll, q, vel, inst, bus)
@@ -61,8 +76,21 @@ class Arr:
             t += d
         return t
     def dr(self, t, note, vel, bus='film'):
-        self.ev.append(dict(t=float(t), d=0.2, p=int(note), v=int(vel), i='dr', bus=bus, g=0))
+        self.ev.append(dict(t=float(t), d=0.2, p=int(note), v=int(vel), i='dr', bus=bus, g=0, cue=getattr(self, 'cue', None)))
     def kit(self, t, prog, bus='film'): self.drprog.append((t, prog, bus))
+    def clamp(self, t_end):
+        """end every note of the current cue by t_end, so a cue never rings on under the next one"""
+        keep = []
+        for e in self.ev:
+            if e['cue'] == self.cue and e['bus'] == 'film':
+                if e['t'] >= t_end - 0.02: continue
+                e['d'] = min(e['d'], t_end - e['t'])
+            keep.append(e)
+        self.ev = keep
+    def scale(self, f):
+        """scale the velocity of every note of the current cue (to sit it at the same level as its neighbours)"""
+        for e in self.ev:
+            if e['cue'] == self.cue: e['v'] = int(max(1, min(127, e['v'] * f)))
 
 A = Arr()
 
@@ -182,335 +210,267 @@ def chippad(t, dur, chord, vel=50, bus='film'):
     A.n(t, dur, p(b) + 12, vel, 'tpad', bus)
     for q in vo[1:]: A.n(t, dur, q, vel - 6, 'tpad', bus)
 
-# ============================================================================== the film
-def night():
-    # 02:50 — a cosy, slightly sleepy groove. The picture fades up from black; the band comes in with it.
-    beat = 60 / 84
-    t0 = 7.0
-    pick(t0, 17.45, beat, P1, 42)
-    bassline(t0 + 4 * beat, 17.45, beat, P1[1:] + P1[:1], 60)
-    brushes(t0 + 4 * beat, 17.3, beat, 0.9)
-    A.seq(t0 + 4 * beat, beat, THEME_A, 58, 'vib')
-    # red again → a small deflating shrug (vibes step down, the bass slides, nothing scary)
-    f = T['fail1']
-    A.n(f + 0.02, 0.35, 'G4', 50, 'vib'); A.n(f + 0.38, 1.2, 'E4', 44, 'vib')
-    for k, q in enumerate(['C3', 'B2', 'Bb2', 'A2']): A.n(f + 0.05 + k * 0.12, 0.14 if k < 3 else 0.9, q, 58 - k * 4, 'bass')
-    # trying again: guitar alone, a questioning bridge line
-    pick(18.6, 23.7, beat, ['Bb7', 'Am7'], 36)
-    A.seq(19.3, beat, 'D5:1 F5:.5 A5:.5 C6:1 A5:1 | G5:1 E5:.5 C5:.5 D5:2', 42, 'vib')
-    # the second failure — on the screen: the same shrug, a little lower, in both timbres
-    f = T['fail2']
-    for inst, v in (('vib', 50), ('lead', 60)):
-        A.n(f + 0.02, 0.3, 'F4', v, inst); A.n(f + 0.33, 0.3, 'E4', v - 4, inst); A.n(f + 0.64, 1.1, 'D4', v - 8, inst)
-    for k, q in enumerate(['G2', 'F#2', 'F2', 'E2']): A.n(f + 0.05 + k * 0.12, 0.14 if k < 3 else 1.2, q, 56 - k * 4, 'bass')
-    for k, q in enumerate(['G2', 'F#2', 'F2', 'E2']): A.n(f + 0.05 + k * 0.12, 0.14 if k < 3 else 1.2, q, 70, 'tri')
-    A.n(f + 1.0, 0.1, 'C5', 44, 'pizz')
-    A.ch(24.9, 1.4, 'C4 F4 G4', 30, 'harm'); A.ch(24.9, 1.4, 'C4 F4 G4', 34, 'tpad')
-    # reading the error … the frustration builds (comic, not tense): a pizz tick that speeds up, a clarinet trill
-    t, dt = 26.3, 0.72
-    while t < 28.9: A.n(t, 0.1, 'A3' if int(t * 10) % 2 else 'E4', 40, 'pizz'); t += dt; dt = max(0.18, dt * 0.84)
-    t = 28.95
-    while t < 30.5: A.n(t, 0.08, 'A4', 44 + (t - 28.95) * 10, 'pizz'); t += 0.11
-    t = 29.1
-    while t < 30.5: A.n(t, 0.06, 'G5', 40, 'clar'); A.n(t + 0.06, 0.06, 'A5', 40, 'clar'); t += 0.12
-    # hands slide down his face: the clarinet slides down with them
-    for k, q in enumerate(['A5', 'G5', 'F5', 'E5', 'D5', 'C5', 'Bb4', 'A4']): A.n(30.6 + k * 0.07, 0.09 if k < 7 else 0.9, q, 44 - k * 2, 'clar')
-    A.ch(31.3, 1.7, 'D3 A3 C4 F4', 30, 'gtr', roll=0.05)
-    # the little friend, worried: its motif, asked as a question (chiptune, from the screen)
-    A.seq(33.5, 0.34, CUBE_Q, 52, 'sq'); chippad(33.4, 3.6, 'Dm9', 34)
-    A.seq(35.4, 0.4, 'A5:.5 G5:.5 F5:1', 44, 'sq'); A.n(33.8, 0.3, 'C7', 30, 'bell')
-    A.ch(33.4, 3.4, 'D3 A3 F4', 22, 'gtr', roll=0.06)
-    # rubbing his eyes, the big sigh: warm and kind ("it's ok"), never minor-key sad
-    beat = 60 / 72
-    pick(37.4, 45.0, beat, ['F9', 'Em7', 'Dm9', 'C13'], 36)
-    A.seq(41.5, beat, 'A4:1 G4:1 F4:2', 44, 'vib')
-    # his head sinks to the keyboard: the guitar slows down with him
-    for k, (tt, c) in enumerate([(45.4, 'F9'), (46.9, 'Dm9'), (48.5, 'Bb7')]):
-        b, vo = V[c]
-        A.n(tt, 2.0, p(b) + 12, 36, 'gtr')
-        for j, q in enumerate(vo[1:]): A.n(tt + 0.25 + j * (0.26 + k * 0.05), 1.6, q, 32 - k * 3, 'gtr')
-    A.ch(T['headDown'], 2.5, 'F2 C3 A3', 30, 'harm')
-    # the keyboard types garbage by itself: a small chip ostinato — h, j, k (vim keys!) on three notes
-    notes = {'h': 'C5', 'j': 'D5', 'k': 'E5'}
-    s = 'hhjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk'
-    for k, ch in enumerate(s):
-        tt = T['headDown'] + k * 6 / 44
-        if tt < T['garbage'] + 0.2: continue
-        A.n(tt, 0.06, notes[ch], 26 + (k % 4 == 0) * 10, 'arp')
-    A.seq(53.55, 0.3, 'G5:1 C6:2', 50, 'sq')                                     # ?
-    A.ch(56.2, 2.0, 'F4 A4 D5', 30, 'tpad')                                       # it looks up at him
+# ============================================================================== the film: nine continuous cues
+# Each cue is one piece of music with one ensemble and one tempo grid. Cues begin and end on story turns (not on
+# cuts), bar lines are placed so the big moments land on downbeats, and between cues there is silence.
+class Grid:
+    """bar/beat → seconds. Bars count from 1 at t0 (0 and negatives are pickup bars)."""
+    def __init__(self, t0, bpm, beats=4): self.t0, self.b, self.n = t0, 60.0 / bpm, beats
+    def __call__(self, bar, beat=0.0): return self.t0 + (bar - 1) * self.n * self.b + beat * self.b
+    @property
+    def bar(self): return self.n * self.b
 
-def dive():
-    r = T['resolve']
-    # a deep breath and a nod: a rising chip build over a triangle pedal
-    t = r + 0.4
-    while t < 61.2: A.n(t, 0.2, 'F2', 60 + (t - r) * 6, 'tri'); t += 0.3
-    for k, c in enumerate(['F9', 'Gm9', 'Am7']):
-        vo = V[c][1]
-        for j in range(4): A.n(r + 0.6 + k * 0.85 + j * 0.2, 0.18, p(vo[j % len(vo)]) + 12, 40 + k * 8, 'arp')
-    A.ch(61.25, 0.5, 'F5 A5 C6', 56, 'bell')
-    # the march along the prompt
-    beat = 60 / 132
-    chipdrums(61.7, 63.4, beat, 0.8)
-    chipbass(61.7, 63.4, beat, ['F9'], 76)
-    A.seq(61.7, beat, CUBE + ' r:.75 ' + CUBE, 64, 'lead')
-    # at the edge: hold … (a snare roll), the leap (up), the dive (down)
-    t = 63.4
-    while t < 64.0: A.n(t, 0.05, 38, 30 + (t - 63.4) * 80, 'snare'); t += 0.06
-    A.n(63.4, 0.6, 'C4', 50, 'sq'); A.n(63.4, 0.6, 'C3', 60, 'tri')
-    for k, q in enumerate(['C5', 'F5', 'A5', 'C6', 'F6', 'A6', 'C7']): A.n(64.0 + k * 0.1, 0.12, q, 56, 'arp')
-    A.ch(64.9, 0.6, 'F5 A5 C6', 54, 'bell'); A.n(64.9, 0.3, 36, 80, 'kick')
-    for k, q in enumerate(['C7', 'A6', 'F6', 'C6', 'A5', 'F5', 'C5']): A.n(65.0 + k * 0.1, 0.12, q, 46 - k * 3, 'arp')
-    chippad(65.7, 0.8, 'Fsus', 40)
-    # falling into the code world: a sliding whistle
-    A.n(66.5, 0.9, 'C6', 48, 'lead', glide=-12)
-    A.n(67.4, 0.3, 36, 90, 'kick'); A.n(67.4, 0.5, 'F2', 80, 'tri')
-    # the reveal: F Lydian, slow and sparkly — the theme, stretched out
-    for k in range(4):
-        chippad(67.6 + k * 1.45, 1.6, 'Fly' if k % 2 == 0 else 'G/F', 44)
-    chiparp(67.6, 73.3, 0.36, ['Fly', 'G/F'], 34, step=0.5)
-    A.seq(68.2, 0.55, 'C5:1 D5:1 F5:2 A5:2 G5:1 F5:1 | E5:4', 50, 'lead')
-    # the bug: its tiptoe, a raspberry, the little friend's "!" and "hmph"
-    b = T['bugAppear']
-    A.n(b, 0.1, 'B6', 50, 'bell')
-    A.seq(b + 0.5, 0.3, BUG + ' ' + BUG, 60, 'lead', stacc=0.6)
-    A.n(74.75, 0.35, 'G3', 60, 'noise', glide=-5)
-    A.n(73.95, 0.2, 'C7', 50, 'bell')
-    t = 75.0
-    while t < 77.8: A.n(t, 0.12, 'F2' if int((t - 75) / 0.3) % 2 == 0 else 'C3', 60, 'tri'); t += 0.3
-    A.n(76.45, 0.2, 38, 80, 'snare')
-    t = 77.9
-    while t < 78.55: A.n(t, 0.04, 38, 30 + (t - 77.9) * 60, 'snare'); t += 0.05
-    # the chase: quick, bright, cartoony
-    beat = 60 / 150
-    chipdrums(78.6, 82.0, beat, 0.72, busy=True)
-    chipbass(78.6, 82.0, beat, ['F9', 'F9', 'Bb7', 'C13'], 80, eighths=True)
-    t = A.seq(78.6, beat, CUBE + ' r:1.25 ' + BUG + ' r:.25 ' + CUBE + ' r:1.25', 62, 'lead', stacc=0.8)
-    # the glitch: the tune stutters and drops out
-    for k in range(6): A.n(82.0 + k * 0.1, 0.08, p('C6') - k, 50 - k * 5, 'lead')
+def pick_half(t0, t1, beat, chords, vel=36, inst='gtr', bus='film'):
+    """a sparser guitar: bass + three chord tones per bar"""
+    t, bar = t0, 0
+    while t < t1 - 0.05:
+        b, vo = V[chords[bar % len(chords)]]
+        A.n(t + hum(), beat * 3.5, p(b) + 12, vel + 2, inst, bus)
+        for k, j in enumerate((1, 3, 2)):
+            tt = t + (k + 1) * beat
+            if tt < t1 - 0.02: A.n(tt + hum(), beat * 2.2, vo[j % len(vo)], vel - 6, inst, bus)
+        t += beat * 4; bar += 1
 
-def together():
-    # he is still head-down; the screen flickers — short chip stutters leak out of it
-    for g in CUES['glitches']:
-        q = ['C6', 'A5', 'F5', 'G5', 'D6'][int(g['t'] * 12) % 5]
-        A.n(g['t'], 0.08, q, 30 + 30 * g['k'], 'arp'); A.n(g['t'] + 0.04, 0.05, 42, 50, 'hat')
-    # he bolts upright: a little "ta?!"
-    A.ch(85.21, 0.4, 'F4 A4 C5 D5', 56, 'vib'); A.n(85.21, 0.1, 'C5', 50, 'pizz'); A.n(85.21, 0.2, 'A3', 60, 'wood')
-    A.seq(86.2, 0.45, 'C5:1 F5:1 r:.5 D5:1 G5:1.5', 40, 'vib')
-    # what are those? the tiny figures — their motifs, softly (guitar in the room, chip on the screen)
-    A.ch(88.2, 2.0, 'F3 C4 E4 A4', 30, 'gtr', roll=0.08)
-    A.seq(88.8, 0.34, CUBE, 40, 'vib')
-    A.seq(90.5, 0.3, CUBE, 44, 'sq'); A.seq(91.6, 0.3, BUG, 40, 'arp', stacc=0.6); chippad(90.4, 2.6, 'F9', 30)
-    # the double take (pizz) … a knuckle crack … let's go
-    for dt, q in [(0.15, 'F4'), (0.4, 'F4'), (1.25, 'C5'), (2.4, 'A4'), (2.85, 'C5'), (3.3, 'F5')]: A.n(93.0 + dt, 0.12, q, 44, 'pizz')
-    A.seq(95.4, 0.35, 'C5:1 E5:1 G5:2', 40, 'clar')
-    A.n(97.45, 0.15, 'E5', 60, 'wood'); A.n(97.6, 0.15, 'A4', 56, 'wood')
-    # working together: a friendly groove (104 bpm) played by both bands, the theme on top
-    beat = 60 / 104
-    t0 = 98.0
-    strum(t0, 103.0, beat, P1, 44); bassline(t0, 103.0, beat, P1, 62); brushes(t0, 103.0, beat, 1.0)
-    chipdrums(t0, 103.0, beat, 0.7); chipbass(t0, 103.0, beat, P1, 70); chiparp(100.3, 103.0, beat, P1, 36)
-    for inst, v in (('vib', 56), ('lead', 58)): A.seq(t0 + 4 * beat, beat, THEME_A, v, inst)
-    # the light finds the fake "o": stop-time — a ping, a question
-    A.n(103.0, 0.6, 'E6', 50, 'bell'); A.ch(103.0, 0.4, 'F4 B4 E5', 40, 'sq'); A.n(103.0, 0.3, 'F2', 70, 'tri')
-    # sneaking up: tiptoe
-    t, k = 104.0, 0
-    while t < 106.6:
-        q = ['F3', 'A3', 'C4', 'D4', 'Eb4', 'E4'][k % 6]
-        A.n(t, 0.12, q, 44, 'tri'); A.n(t, 0.1, p(q) + 24, 26, 'arp'); A.n(t, 0.1, q, 40, 'pizz')
-        t += 0.4; k += 1
-    t = 106.6
-    while t < 107.1: A.n(t, 0.04, 38, 30 + (t - 106.6) * 100, 'snare'); t += 0.05
-    # the lunge (up) … the bug hops away (its tiptoe, fast) … belly flop (a cartoon "bwamp")
-    for k, q in enumerate(['C5', 'F5', 'A5', 'C6']): A.n(107.1 + k * 0.06, 0.08, q, 56, 'lead')
-    A.seq(107.25, 0.2, BUG, 50, 'arp', stacc=0.6)
-    A.n(107.55, 0.7, 'F3', 70, 'tri', glide=-7); A.n(107.55, 0.2, 36, 80, 'kick')
-    # dazed: a wobbly little circle
-    for k in range(8): A.n(108.3 + k * 0.42, 0.4, ['A5', 'G5', 'F5', 'G5'][k % 4], 30, 'sq')
-    chippad(108.2, 3.6, 'Fly', 26)
-    # the idea — leave a light: soft, then the groove comes back while he types
-    A.seq(112.1, 0.5, 'G4:1 C5:1 E5:2', 40, 'vib'); A.ch(112.1, 2.0, 'C3 G3 Bb3 E4', 32, 'gtr', roll=0.05)
-    t0 = 114.2
-    strum(t0, 116.85, beat, ['F9', 'Dm9'], 40); bassline(t0, 116.85, beat, ['F9', 'Dm9'], 58); brushes(t0, 116.8, beat, 0.8)
-    # the lantern lights up: a warm chord, a sparkle on "here!"
-    A.ch(117.0, 2.8, 'F3 C4 E4 A4 D5', 40, 'vib', roll=0.06); chippad(117.0, 3.0, 'F6', 44)
-    for k, q in enumerate(['C6', 'F6', 'A6', 'C7']): A.n(117.45 + k * 0.08, 0.3, q, 44, 'bell')
-    # following the footprints: a detective walk
-    beat = 60 / 104
-    t, k = 118.2, 0
-    walk = ['F2', 'G2', 'A2', 'C3', 'D3', 'C3', 'A2', 'G2']
-    while t < 122.1: A.n(t, beat * 0.7, walk[k % 8], 66, 'tri'); t += beat; k += 1
-    for tt in np.arange(118.4, 121.8, beat * 2): A.n(tt, 0.1, 'A6', 30, 'arp')
-    A.seq(119.0, beat, 'C5:.5 r:.5 D5:.5 r:.5 F5:1 r:1 | G5:.5 r:.5 A5:.5 r:.5 C6:1', 46, 'lead', stacc=0.5)
-    # lost among the braces: a wandering tune, curious rather than worried
-    chippad(122.2, 2.9, 'Fly', 34); chippad(125.1, 2.9, 'G/F', 34)
-    t = 122.2
-    while t < 128.0: A.n(t, 0.2, 'F2' if int((t - 122.2) / 0.7) % 2 == 0 else 'G2', 50, 'tri'); t += 0.7
-    A.seq(122.4, 0.42, 'C5:1 D5:1 E5:1 G5:1 B5:2 r:1 | A5:1 G5:1 E5:1 D5:2 r:1 | E5:1 G5:1 B5:1 D6:3', 44, 'sq')
-    # eager — he wants to help: the band gathers speed
-    beat = 60 / 104
-    strum(128.0, 131.4, beat, ['Bb7', 'C13'], 42, rhythm=(0, 1, 1.5, 2, 2.5, 3, 3.5)); bassline(128.0, 131.4, beat, ['Bb7', 'C13'], 58)
-    A.seq(129.6, beat, 'C5:.5 D5:.5 E5:.5 G5:.5 A5:1', 46, 'vib')
-    # holding backspace — "uh … uh … uh …" (a stepwise clarinet climb, a ticking pizz)
-    for k, q in enumerate(['C5', 'D5', 'E5', 'F5']): A.n(131.6 + k * 0.75, 0.7, q, 40 + k * 4, 'clar')
-    for k in range(9): A.n(131.5 + k * 0.36, 0.08, 'C4' if k % 2 == 0 else 'G3', 34, 'pizz')
-    # the floor gives way: things tumble down (a comic cascade), the errors come raining: plink-plonk
-    c = T['collapse']
-    A.n(c, 0.4, 36, 80, 'kick'); A.n(c, 0.6, 'F1', 80, 'tri', glide=-5)
-    for k, q in enumerate(['C7', 'A6', 'F6', 'C6', 'A5', 'F5', 'C5', 'A4', 'F4', 'C4']): A.n(c + 0.1 + k * 0.1, 0.12, q, 50 - k * 2, 'arp')
-    for b in CUES['blocks']:
-        tb = b['t'] + 0.45
-        A.n(tb, 0.1, 'G5', 44, 'sq'); A.n(tb + 0.1, 0.16, 'D5', 40, 'sq')
-    A.n(T['hit'], 0.1, 'C3', 70, 'noise'); A.n(T['hit'], 0.3, 'C2', 80, 'tri', glide=-5)
-    # dizzy: little circling birds
-    for k in range(10): A.n(136.8 + k * 0.24, 0.2, ['C6', 'E6', 'G6', 'E6'][k % 4], 26, 'arp')
-    # oops (sheepish)
-    A.n(139.15, 0.25, 'D5', 44, 'clar'); A.n(139.45, 0.7, 'C5', 40, 'clar')
-    A.n(139.6, 0.1, 'F4', 36, 'pizz'); A.n(139.85, 0.1, 'E4', 36, 'pizz')
-    A.ch(139.2, 2.4, 'C3 G3 Bb3 D4', 28, 'gtr', roll=0.05)
-    A.n(140.65, 0.1, 'A5', 40, 'vib')
-    # Ctrl+Z, Ctrl+Z … then time runs backwards (the cascade, climbing back up)
-    A.n(142.2, 0.08, 'C5', 40, 'wood'); A.n(142.75, 0.08, 'C5', 40, 'wood')
-    for k, q in enumerate(['C4', 'F4', 'A4', 'C5', 'F5', 'A5', 'C6', 'F6', 'A6', 'C7']): A.n(T['rewind'] + 0.15 + k * 0.17, 0.14, q, 30 + k * 2, 'arp')
-    A.n(T['rewind'] + 0.1, 1.8, 'C4', 40, 'tri', glide=12)
-    A.ch(146.3, 0.6, 'F5 A5 C6', 44, 'bell')
-    A.n(146.6, 0.5, 'C3', 60, 'tri', glide=7)                                    # shaking it off
-    # back on its feet: the groove, in chiptune
-    beat = 60 / 104
-    chipdrums(147.4, 151.8, beat, 0.6); chipbass(147.4, 151.8, beat, P1, 66); chiparp(147.4, 151.8, beat, P1, 30)
-    A.seq(147.4 + 2 * beat, beat, 'C5:.5 D5:.5 F5:1 A5:1 G5:.5 F5:.5 | D5:3', 50, 'lead')
-    # near miss #2: the bug taunts, the lunge, the hop, the flop, the escape upward
-    A.seq(152.5, 0.25, BUG + ' ' + BUG, 56, 'lead', stacc=0.6)
-    A.n(153.1, 0.3, 'G3', 50, 'noise', glide=-5); A.n(154.0, 0.3, 'G3', 50, 'noise', glide=-5)
-    for k, q in enumerate(['C5', 'F5', 'A5', 'C6']): A.n(154.9 + k * 0.06, 0.08, q, 56, 'lead')
-    for k, q in enumerate(['E5', 'G5', 'C6']): A.n(155.05 + k * 0.08, 0.1, q, 44, 'arp')
-    A.n(155.5, 0.7, 'F3', 70, 'tri', glide=-7); A.n(155.5, 0.2, 36, 80, 'kick')
-    for j in range(4): A.seq(156.0 + j * 0.62, 0.14, BUG, 40, 'arp', stacc=0.5, shift=j * 2)
-    A.n(158.6, 0.4, 'A5', 40, 'sq'); A.n(159.0, 0.9, 'G5', 36, 'sq')           # a little pout
+def cue_a():
+    """02:50 — the acoustic trio, from the fade-up to his forehead on the keyboard. Nothing stops for the failures:
+    the drums drop out after the first red, the bass after the second, and the guitar carries on alone."""
+    A.cue = 'A 02:50'
+    g = Grid(7.0, 84); b = g.b
+    pick(g(1), g(7), b, ['F9', 'Dm9', 'Gm9', 'C13', 'F9', 'Dm9'], 42)
+    bassline(g(2), g(7), b, ['Dm9', 'Gm9', 'C13', 'F9', 'Dm9'], 58)
+    brushes(g(2), g(5), b, 0.85)
+    A.seq(g(2), b, THEME_A, 56, 'vib')                                       # bars 2–5, landing on the held C
+    # bars 7–10: thinner; the bridge, quietly, on clarinet
+    pick_half(g(7), g(11), b, ['Bb7', 'Am7', 'Gm9', 'C13'], 36)
+    A.seq(g(7), b, THEME_B, 38, 'clar')
+    # bars 11–14: the little friend's motif as a question (it is worried about him), then the phrase comes home
+    pick(g(11), g(15), b, ['F9', 'Bb7', 'Gm9', 'C13'], 34)
+    bassline(g(11), g(15), b, ['F9', 'Bb7', 'Gm9', 'C13'], 44, stacc=1.0)
+    A.seq(g(11, 0.5), b, CUBE_Q, 44, 'vib')
+    A.seq(g(13), b, 'E5:.5 D5:.5 C5:1 D5:1 E5:1 | G5:2 F5:1 E5:1', 46, 'vib')
+    # bars 15–16: slowing down with him … the last chord rings out as his head reaches the keys
+    b0, vo = V['F9']
+    A.n(g(15), 3.2, p(b0) + 12, 34, 'gtr')
+    for k, q in enumerate(vo): A.n(g(15) + 0.5 + k * (0.45 + k * 0.08), 3.0, q, 32 - k * 2, 'gtr')
+    A.n(g(15), 3.0, 'F5', 40, 'vib')
+    A.ch(49.9, 3.2, 'F2 C3 A3', 26, 'harm')
 
-def quiet():
-    # the quiet moment: tender and warm, both timbres together, very soft
-    beat = 60 / 66
-    t0 = 160.4
-    pick(t0, 178.0, beat, ['F9', 'Am7', 'Bb7', 'C13', 'F9'], 34)
-    bassline(t0, 178.0, beat, ['F9', 'Am7', 'Bb7', 'C13', 'F9'], 44, stacc=1.0)
-    for k, c in enumerate(['F9', 'Am7', 'Bb7', 'C13', 'F9']): chippad(t0 + k * 4 * beat, 4 * beat, c, 26)
-    mel = 'C5:.5 D5:.5 F5:1 A5:1 G5:.5 F5:.5 | D5:1.5 C5:.5 D5:1 F5:1 | G5:.5 F5:.5 D5:1 Bb4:1 D5:.5 C5:.5 | C5:4'
-    A.seq(t0, beat, mel, 46, 'vib'); A.seq(t0, beat, mel, 34, 'sq')
-    # the wave: the little friend's motif, slow and small; then his smile — the phrase comes home
-    A.seq(172.2, 0.4, CUBE, 40, 'sq')
-    A.seq(174.9, beat, 'A5:1 G5:1 F5:2', 44, 'vib'); A.seq(174.9, beat, 'A5:1 G5:1 F5:2', 30, 'sq')
-    A.ch(175.9, 2.4, 'F3 C4 E4 A4', 26, 'pad')
+def chipgroove(t0, t1, b, chords, vel=62, hats=0.6, kick=0, eighths=True):
+    """the code world's one groove: triangle bass in eighths, hats on the eighths, and (kick=1) kick on 1 and 3 or
+    (kick=2) the full kit. Every chiptune passage in the film sits on this same groove."""
+    chipbass(t0, t1, b, chords, vel, eighths=eighths)
+    t = t0
+    while t < t1 - 0.02:
+        for j in range(8):
+            tj = t + j * b / 2
+            if tj >= t1 - 0.02: break
+            A.n(tj, 0.1, 42, (60 if j % 2 == 0 else 40) * hats, 'hat')
+            if kick >= 1 and j in (0, 4): A.n(tj, 0.2, 36, 80, 'kick')
+            if kick >= 2 and j in (2, 6): A.n(tj, 0.2, 38, 62, 'snare')
+        t += 4 * b
 
-def closing():
-    # an idea (ding!) and the plan: a sneaky, bouncy groove at 120 bpm; the gates land on downbeats
-    A.n(179.0, 1.0, 'C6', 56, 'vib'); A.n(179.0, 0.6, 'C7', 44, 'bell')
-    for k, q in enumerate(['F4', 'A4', 'C5', 'E5', 'G5']): A.n(179.9 + k * 0.1, 0.14, q, 40, 'vib')
-    beat = 0.5
-    t0 = 180.5
+def cue_b():
+    """into the code — one chiptune piece at 120 bpm in three 4-bar phrases, on one groove that never stops until the
+    glitch: the decision and the leap (bars 1–4), the wonder of the code world (5–8), the bug and the chase (9–12).
+    The glitch lands on the downbeat of bar 13."""
+    A.cue = 'B into the code'
+    g = Grid(58.0, 120); b = g.b
+    # the groove: quarter-note bass for two bars (a deep breath), then eighths all the way; hats throughout
+    chipgroove(g(1), g(3), b, ['F9', 'Gm9'], 50, hats=0.35, eighths=False)
+    chipgroove(g(3), g(5), b, ['F9', 'C13'], 58, hats=0.45)
+    chipgroove(g(5), g(9), b, ['Fly', 'G/F', 'Fly', 'G/F'], 56, hats=0.4)
+    chipgroove(g(9), g(11), b, ['F9', 'Bb7'], 62, hats=0.55, kick=1)
+    chipgroove(g(11), g(13), b, ['F9', 'C13'], 66, hats=0.65, kick=2)
+    chiparp(g(1), g(13), b, ['F9', 'Gm9', 'F9', 'C13', 'Fly', 'G/F', 'Fly', 'G/F', 'F9', 'Bb7', 'F9', 'C13'], 24)
+    # bars 1–4: the little friend's motif (its decision), twice; a climb; the leap (a run up) and the dive (a run
+    # down, then a slide as it falls into the code)
+    A.seq(g(1), b, CUBE + ' r:1.5 | ' + CUBE + ' r:1.5 | F5:1 G5:1 A5:1 C6:1', 54, 'lead')
+    for k, q in enumerate(['C6', 'F6', 'A6', 'C7']): A.n(g(4) + k * b / 4, 0.1, q, 46, 'arp')
+    A.ch(g(4, 1), 0.5, 'F5 A5 C6', 44, 'bell')
+    A.n(g(4, 2.8), 0.85, 'C6', 42, 'lead', glide=-12)
+    # bars 5–8: F Lydian, a soft pad, the tune stretched out
+    for k in range(4): chippad(g(5 + k), g.bar, 'Fly' if k % 2 == 0 else 'G/F', 36)
+    A.seq(g(5), b, 'C5:1 D5:1 F5:2 | A5:2 B5:1 A5:1 | G5:3 E5:1 | D5:4', 48, 'lead')
+    # bars 9–10: the bug's tiptoe; bars 11–12: the chase, call and answer
+    A.seq(g(9), b, BUG + ' r:2 | ' + BUG + ' ' + BUG, 52, 'lead', stacc=0.6)
+    A.seq(g(11), b, CUBE + ' r:1.5 | ' + BUG + ' C5:.25 F5:.25 A5:.5 C6:1', 56, 'lead', stacc=0.85)
+    # the glitch (bar 13, one): the tune stutters, sinks and is gone
+    for k in range(6): A.n(g(13) + k * 0.07, 0.06, p('C6') - 2 * k, 46 - k * 6, 'lead')
+    A.clamp(g(13) + 0.45)
+    A.scale(0.8)
+
+def cue_c():
+    """working together — one piece at 105 bpm. Four bars of wonder while he sees them and takes the keyboard, then
+    sixteen bars of one groove (his guitar, bass and brushes, with the little friend's chiptune lead doubling the
+    vibes) in four 4-bar phrases: search, lunge-and-log, lantern-and-maze, eager. The collapse lands on bar 17, one,
+    and is the only place the band stops."""
+    A.cue = 'C working together'
+    g = Grid(98.0, 105); b = g.b
+    # bars −3…0: what are those? (a soft pad, the vibes and the little friend's motif; no drums)
+    intro = ['F9', 'Bb7', 'Gm9', 'C13']
+    for k, c in enumerate(intro): chippad(g(-3 + k), g.bar, c, 22)
+    chiparp(g(-2), g(0), b, intro[1:3], 20)
+    A.seq(g(-3, 0.5), b, CUBE, 40, 'vib')
+    A.seq(g(-2, 0.5), b, CUBE_Q, 34, 'sq')
+    A.seq(g(-1), b, 'A4:1 C5:1 D5:1 F5:1', 38, 'vib')
+    for k in range(4): A.ch(g(0, k), b * 0.9, [p(V['C13'][0]) + 12] + [p(q) for q in V['C13'][1]], 28 + k * 5, 'gtr', roll=0.012)
+    A.n(g(0, 3.5), b / 2, 'E2', 48, 'bass')
+    # the groove, bars 1–16
+    prog = P1 + P2 + ['F9', 'Dm9', 'Fly', 'G/F'] + ['Bb7', 'C13', 'Bb7', 'C13']
+    vel = [44] * 4 + [40] * 4 + [40] * 4 + [44] * 4
+    for k, c in enumerate(prog):
+        rh = (0, 1, 1.5, 2, 2.5, 3, 3.5) if k >= 13 else (0, 1.5, 2.5, 3.5)
+        strum(g(1 + k), g(2 + k), b, [c], vel[k], rhythm=rh)
+        bassline(g(1 + k), g(2 + k), b, [c, prog[(k + 1) % 16]], 58 if k < 12 else 60)
+        brushes(g(1 + k), g(2 + k), b, [0.9, 0.9, 0.75, 0.75, 0.8, 0.7, 0.8, 0.8, 0.8, 0.8, 0.65, 0.65, 0.9, 0.95, 1.0, 1.0][k])
+    def both(t, spec, v):   # vibes and the chip lead in unison: the two of them working together
+        A.seq(t, b, spec, v, 'vib'); A.seq(t, b, spec, v - 14, 'lead')
+    # phrase 1 (bars 1–4): the search — the tune; the fake "o" is answered by the bug's tiptoe in the arps
+    both(g(1), THEME_A, 54)
+    A.seq(g(4), b, BUG + ' ' + BUG, 30, 'arp', stacc=0.5)
+    # phrase 2 (bars 5–8): the lunge (a cymbal on one, the bass slides down), dazed (a woozy line), the log (the bridge)
+    A.dr(g(5), 49, 34)
+    for k, q in enumerate(['C3', 'B2', 'Bb2', 'A2', 'Ab2']): A.n(g(5, 0.5) + k * 0.07, 0.08, q, 52 - k * 3, 'bass')
+    both(g(5, 1), 'A5:1 G5:1 F5:1 | G5:1 E5:2 D5:1', 44)
+    both(g(7), 'D5:1 F5:.5 A5:.5 C6:1 A5:1 | G5:1 E5:.5 C5:.5 E5:2', 50)
+    # phrase 3 (bars 9–12): the lantern (a bell), following the footprints, then lost among the braces (Lydian)
+    A.ch(g(9, 0.5), 0.6, 'C6 F6', 36, 'bell')
+    both(g(9), 'C5:.5 D5:.5 F5:1 A5:1 C6:.5 A5:.5 | G5:1.5 F5:.5 D5:1 F5:1', 50)
+    both(g(11), 'E5:1 G5:1 B5:2 | A5:1 G5:1 E5:2', 44)
+    chiparp(g(11), g(13), b, ['Fly', 'G/F'], 22)
+    # phrase 4 (bars 13–16): eager — the tune climbs, and on bar 16 a line climbs note by note (holding backspace)
+    both(g(13), 'C5:.5 D5:.5 E5:.5 G5:.5 A5:2 | Bb5:1 A5:.5 G5:.5 A5:2 | C5:.5 D5:.5 E5:.5 G5:.5 A5:2', 50)
+    both(g(16), 'C5:1 D5:1 E5:1 F5:1', 46)
+    # bar 17, one: the collapse — everything falls down an arpeggio onto a low F
+    c = g(17)
+    for k, q in enumerate(['F6', 'C6', 'A5', 'F5', 'C5', 'A4', 'F4', 'C4']): A.n(c + 0.05 + k * 0.09, 0.14, q, 44 - k * 2, 'arp')
+    A.n(c + 0.1, 1.2, 'F1', 60, 'bass')
+
+def cue_d1():
+    """try again — the code world's groove comes back, lighter: the little friend's motif, the bug's taunt, a lunge
+    and a flop, the bug gets away, a small pout. Six bars at 120 bpm."""
+    A.cue = 'D1 try again'
+    g = Grid(147.4, 120); b = g.b
+    chipgroove(g(1), g(6), b, ['F9', 'Gm9', 'F9', 'C13', 'F9'], 54, hats=0.45, eighths=False)
+    A.seq(g(1), b, CUBE + ' r:1.5 | ' + CUBE_Q + ' r:1.5', 50, 'lead', stacc=0.85)
+    A.seq(g(3), b, BUG + ' ' + BUG, 48, 'lead', stacc=0.6)                            # the near miss
+    A.seq(g(4), b, 'C5:.5 F5:.5 A5:.5 r:1', 46, 'lead')
+    for k, q in enumerate(['C5', 'F5', 'A5', 'C6']): A.n(g(4, 3) + k * 0.05, 0.08, q, 48, 'lead')   # the lunge …
+    A.n(g(5), 0.6, 'F3', 58, 'tri', glide=-7)                                                        # … the flop
+    for j in range(4): A.seq(g(5, j), b, BUG, 32, 'arp', stacc=0.5, shift=j * 2)                   # it bounces away
+    A.n(g(6), b, 'A5', 38, 'sq'); A.n(g(6, 1), b * 2, 'G5', 34, 'sq'); A.n(g(6), g.bar * 0.75, 'F2', 42, 'tri')
+    A.clamp(g(6) + g.bar * 0.8)
+
+def cue_d2():
+    """the quiet moment — guitar and vibes, very soft; the little friend's motif answers once, when it waves."""
+    A.cue = 'D2 quiet'
+    g = Grid(160.4, 66); b = g.b
+    ch = ['F9', 'Am7', 'Bb7', 'C13', 'F9']
+    pick(g(1), g(6), b, ch, 32)
+    bassline(g(1), g(6), b, ch, 40, stacc=1.0)
+    for k, c in enumerate(ch): chippad(g(1 + k), g.bar, c, 20)
+    A.seq(g(1), b, THEME_A, 44, 'vib')
+    A.seq(172.2, 0.4, CUBE, 34, 'sq')
+    A.seq(g(5), b, 'A5:1 G5:1 F5:2', 42, 'vib')
+    A.clamp(g(6))
+
+def cue_e():
+    """closing in — one sneaky groove at 120 bpm (walking bass, side stick, guitar chops, the chiptune lead) from the
+    idea to the catch. The two gates land on downbeats. While the bug hides, the same groove goes on tiptoe; the pounce
+    is bar 14, one, and the band comes back in full for the catch. It ends by slowing into relief on a waiting chord."""
+    A.cue = 'E closing in'
+    g = Grid(180.5, 120); b = g.b
+    # the idea: a bright note and a run up into the groove
+    A.n(179.0, 1.0, 'C6', 52, 'vib')
+    for k, q in enumerate(['F4', 'A4', 'C5', 'E5', 'G5']): A.n(g(0, 2) + k * b / 2, 0.2, q, 38, 'vib')
+    # the groove, bars 1–17 (tiptoe in bars 9–13: quarter notes, softer, no chops)
     walk = ['F2', 'A2', 'C3', 'Eb3', 'D3', 'C3', 'A2', 'Ab2']
-    t, k = t0, 0
-    while t < 197.4:
-        q = walk[k % 8]
-        A.n(t, beat * 0.55, q, 64, 'bass'); A.n(t, beat * 0.55, q, 72, 'tri')
-        if k % 2 == 1: A.dr(t, 37, 40); A.n(t, 0.1, 38, 44, 'snare')
-        A.n(t + beat / 2, 0.06, 42, 36, 'hat'); A.dr(t + beat / 2, 42, 18)
-        if k % 2 == 1: A.ch(t + beat / 2, 0.12, 'F3 A3 Eb4', 34, 'gtr'); A.ch(t + beat / 2, 0.1, 'F4 A4 Eb5', 30, 'arp')
-        t += beat; k += 1
+    for k in range(17 * 8):
+        t = g(1) + k * b / 2; bar = 1 + k // 8
+        hide = 9 <= bar <= 13
+        if hide and k % 2: continue
+        A.n(t, b * (0.5 if hide else 0.28), walk[k % 8], (44 if hide else 60 if k % 2 == 0 else 50), 'bass')
+        if k % 4 == 2 and not hide: A.dr(t, 37, 38)
+        if hide: A.dr(t + b / 2, 42, 12)
+        elif k % 2 == 1: A.dr(t, 42, 16); A.ch(t, 0.12, 'F3 A3 Eb4', 30, 'gtr')
     motif = 'F5:.5 r:.5 Ab5:.25 A5:.25 r:.5 C6:.5 r:.5 A5:.5 r:.5 | F5:.5 r:.5 Eb5:.5 D5:.5 C5:1 r:1'
-    for s in (182.5, 186.5, 190.5, 194.5):
-        A.seq(s, beat, motif, 44, 'xyl', stacc=0.6); A.seq(s, beat, motif, 46, 'lead', stacc=0.6)
-    # each click drops a gate: a staccato stop from the band (the gate itself is a sound effect)
-    for g in CUES['gates']:
-        A.ch(g, 0.25, 'F2 C3', 70, 'bass'); A.n(g, 0.25, 'F1', 90, 'tri'); A.n(g, 0.2, 36, 90, 'kick')
-    # the search light floods the trap: a held, bright chord
-    chippad(190.0, 3.0, 'Fly', 40); A.ch(190.0, 3.0, 'F3 C4 E4 B4', 34, 'vib')
-    # the bug panics: tiptoes in every direction
-    for j in range(5): A.seq(192.6 + j * 0.9, 0.12, BUG, 36, 'arp', stacc=0.5, shift=(j % 3) * 2)
-    # the disguise: quiet tiptoes, a question, the feet (!), a sly "hmm" … then a held breath
-    t = 197.4
-    while t < 206.2: A.n(t, 0.3, 'F2', 44, 'tri'); A.n(t + 0.5, 0.05, 42, 26, 'hat'); t += 1.0
-    for k, tt in enumerate([200.7, 201.2, 201.7, 202.2]): A.n(tt, 0.12, ['C5', 'D5', 'E5', 'F5'][k], 40, 'sq')
-    A.seq(202.8, 0.4, 'G5:1 C6:1', 44, 'sq')
-    A.n(204.3, 0.12, 'E6', 56, 'bell'); A.n(204.5, 0.12, 'E6', 56, 'bell')
-    A.n(205.5, 0.5, 'C3', 60, 'tri', glide=-3); A.n(205.6, 0.4, 'Bb4', 40, 'sq')
-    t = 205.8
-    while t < 206.55: A.n(t, 0.04, 38, 26 + (t - 205.8) * 50, 'snare'); t += 0.05
-    # the pounce and the catch: quick and small; a little happy tune while it holds the bug up
-    for k, q in enumerate(['C5', 'F5', 'A5', 'C6']): A.n(206.6 + k * 0.05, 0.08, q, 56, 'lead')
-    A.n(207.25, 0.2, 38, 80, 'snare'); A.n(207.25, 0.3, 36, 80, 'kick')
-    for k, q in enumerate(['F6', 'A6', 'C7']): A.n(207.7 + k * 0.08, 0.3, q, 40, 'bell')
-    beat = 0.5
-    chipbass(208.4, 210.6, beat, ['F9'], 62); chipdrums(208.4, 210.6, beat, 0.5)
-    A.seq(208.45, beat, CUBE + ' r:.25 C5:.25 F5:.25 A5:.5', 54, 'lead')
-    # yes! (a quick grin from the band) … the forehead slap … relief
-    A.seq(210.8, 0.2, 'A4:1 C5:1 D5:1 F5:2', 50, 'vib'); A.ch(210.8, 0.3, 'F3 A3 C4 E4', 46, 'gtr', roll=0.02)
-    A.n(212.5, 0.1, 'C5', 60, 'wood')
-    for k in range(3): A.n(212.8 + k * 0.2, 0.12, ['C6', 'A5', 'C6'][k], 34, 'vib')
-    beat = 60 / 72
-    pick(214.0, 217.6, beat, ['Bb7', 'F9'], 36)
-    A.seq(214.3, beat, 'E5:.5 D5:.5 C5:1 D5:1 E5:1 | F5:2', 44, 'vib')
-    A.ch(217.5, 0.8, 'C3 Bb3 D4 F4', 30, 'gtr', roll=0.04)
+    for bar in (2, 4, 6):
+        A.seq(g(bar), b, motif, 46, 'lead', stacc=0.6); A.seq(g(bar), b, motif, 36, 'xyl', stacc=0.6)
+    for gt in CUES['gates']:   # each gate: a hit on the downbeat, over the groove
+        A.ch(gt, 0.3, 'F2 C3', 62, 'bass'); A.dr(gt, 36, 56); A.ch(gt, 0.3, 'F3 A3 Eb4 G4', 44, 'gtr')
+    # bars 6–8: the light floods in (a held chord), the bug panics (its tiptoe, everywhere)
+    chippad(g(6), g.bar * 3, 'Fly', 26)
+    for j in range(6): A.seq(g(7, j * 1.33), b, BUG, 30, 'arp', stacc=0.5, shift=(j % 3) * 2)
+    # bars 9–13: hiding — the little friend's steps, a question, sly, a snare wind-up into the pounce
+    for k, q in enumerate(['C5', 'D5', 'E5', 'F5']): A.n(g(11, k), b * 0.4, q, 38, 'sq')
+    A.seq(g(12, 0.2), b, 'G5:1 C6:1', 40, 'sq')
+    t = g(13, 2.6)
+    while t < g(14): A.dr(t, 38, 14 + (t - g(13, 2.6)) * 40); t += b / 4
+    # bars 14–17: the pounce (a cymbal on one), the catch — the full groove with brushes, the little friend's tune
+    A.dr(g(14), 36, 56); A.dr(g(14), 49, 30)
+    for k, q in enumerate(['C5', 'F5', 'A5', 'C6']): A.n(g(14) + k * 0.05, 0.08, q, 46, 'lead')
+    brushes(g(14), g(18), b, 0.7)
+    A.seq(g(15), b, CUBE + ' r:.25 C5:.25 F5:.25 A5:.5 | ' + CUBE + ' r:1.5', 46, 'lead')
+    A.seq(g(17), b, 'A4:.5 C5:.5 D5:.5 F5:1 r:1.5', 44, 'vib')
+    # bars 18–19 (at half speed): relief — the phrase comes home and waits on a suspended chord
+    g2 = Grid(g(18), 60); b2 = g2.b
+    pick(g2(1), g2(2), b2, ['Bb7'], 32)
+    A.seq(g2(1), b2, 'E5:.5 D5:.5 C5:1 D5:1 E5:1', 42, 'vib')
+    A.ch(217.4, 1.2, [p('C2') + 12] + [p(q) for q in V['C13'][1]], 30, 'gtr', roll=0.04)
 
-def green():
-    # the hesitation over Enter: one soft high note, nothing else
-    A.n(219.3, 1.4, 'C6', 26, 'vib')
-    # all green: a bright little "ding-ding", then the band plays the tune, happily — not a fanfare
-    g = T['green']
-    A.n(g + 0.05, 0.6, 'C6', 56, 'vib'); A.n(g + 0.3, 0.9, 'F6', 56, 'vib')
-    A.n(g + 0.05, 0.4, 'C7', 40, 'bell'); A.n(g + 0.3, 0.6, 'F7', 40, 'bell')
-    beat = 60 / 108
-    t0 = g + 1.3
-    strum(t0, 235.0, beat, P1 + P2, 42); bassline(t0, 235.0, beat, P1 + P2, 58); brushes(t0, 235.0, beat, 0.9)
-    chipbass(t0, 235.0, beat, P1 + P2, 56); chipdrums(t0 + 8 * beat, 235.0, beat, 0.5)
-    for inst, v in (('vib', 54), ('lead', 44)):
-        e = A.seq(t0 + 4 * beat, beat, THEME_A2, v, inst)
-        A.seq(e, beat, THEME_B, v - 4, inst)
-    # the jar: the bug's tiptoe, made friendly; the clinks are part of the tune
-    beat = 60 / 108
-    chipbass(235.2, 241.0, beat, ['F9', 'C13'], 50)
-    A.seq(235.4, 0.26, BUG.replace('F#5', 'F5') + ' ' + BUG.replace('F#5', 'G5'), 44, 'lead', stacc=0.5)
-    A.n(236.8, 0.5, 'C6', 44, 'lead', glide=-5)
-    A.n(237.4, 0.3, 'F6', 44, 'bell'); A.n(238.0, 0.1, 'A5', 40, 'arp')
-    for k, q in enumerate(['F5', 'G5', 'A5', 'C6', 'D6']): A.n(238.8 + k * 0.2, 0.12, q, 34, 'arp')
-    A.n(239.8, 0.5, 'A6', 44, 'bell'); A.n(239.95, 0.5, 'F6', 36, 'bell')
-    chippad(240.8, 4.0, 'F9', 34); A.seq(240.9, 0.5, 'A5:1 G5:1 F5:2', 40, 'sq')
+def cue_f():
+    """all green — a bright "ding-ding" and the band plays the tune, happily (no fanfare), on through his cheer and
+    the jar (the same groove; the bug's tiptoe turns friendly), ending on a plain F chord."""
+    A.cue = 'F all green'
+    A.n(T['green'] + 0.05, 0.5, 'C6', 50, 'vib'); A.n(T['green'] + 0.3, 1.0, 'F6', 50, 'vib')
+    g = Grid(221.5, 108); b = g.b
+    prog = P1 + P2 + ['F9', 'C13', 'Gm9', 'C13']
+    strum(g(1), g(11), b, prog, 42); bassline(g(1), g(11), b, prog, 56)
+    brushes(g(1), g(7), b, 0.85); brushes(g(7), g(11), b, 0.65)
+    A.seq(g(1), b, THEME_A2, 52, 'vib'); A.seq(g(1), b, THEME_A2, 38, 'lead')
+    A.seq(g(5), b, 'D5:1 F5:.5 A5:.5 C6:1 A5:1 | G5:1 E5:.5 C5:.5 E5:2', 50, 'vib'); A.seq(g(5), b, 'D5:1 F5:.5 A5:.5 C6:1 A5:1 | G5:1 E5:.5 C5:.5 E5:2', 36, 'lead')
+    # bars 7–8: the jar — the bug's tiptoe, made friendly, over the same groove
+    A.seq(g(7), b, BUG.replace('F#5', 'G5') + ' r:2 | ' + BUG.replace('F#5', 'G5') + ' r:2', 42, 'lead', stacc=0.5)
+    A.seq(g(7), b, 'r:2 A5:.5 G5:.5 F5:1 | r:2 C6:.5 A5:.5 G5:1', 40, 'vib')
+    # bars 9–10: the phrase comes home; bar 11: a plain F chord
+    A.seq(g(9), b, 'E5:.5 D5:.5 C5:1 D5:1 E5:1 | G5:2 E5:2', 46, 'vib')
+    A.ch(g(11), 1.2, 'F2 C3 A3 F4', 40, 'gtr', roll=0.04); A.n(g(11), 1.2, 'F5', 42, 'vib'); A.n(g(11), 1.1, 'F2', 44, 'bass')
+    A.clamp(g(11) + 1.2)
 
-def dawn():
-    # sunrise: guitar and flute, open and easy
-    beat = 60 / 70
-    t0 = T['sunrise'] + 0.4
-    pick(t0, 251.0, beat, ['F9', 'Bb7'], 36)
-    A.seq(t0 + 1.0, beat, 'C5:.5 D5:.5 F5:1 A5:1 G5:.5 F5:.5 | D5:3', 42, 'flute')
-    # asleep: guitar harmonics and a whisper of vibes, slower and slower
-    beat = 60 / 60
-    t1 = T['sleep'] + 0.5
-    pick(t1, 262.0, beat, ['F9', 'Dm9', 'Gm9'], 28, inst='gtr')
-    A.seq(t1 + 1.0, beat, 'G5:.5 F5:.5 D5:1 Bb4:1 D5:.5 C5:.5 | C5:4', 30, 'vib')
-    A.ch(259.0, 3.0, 'F3 C4 G4', 22, 'harm')
-    # the little friend types "辛苦了，晚安 :)": one soft note per character (the theme's first phrase)
+def cue_g():
+    """dawn to goodnight — one slow piece at 70 bpm on guitar: the flute at sunrise, a few bars of near-silence while
+    he sleeps, the little friend typing its message one soft chip note per character, and the tune's last phrase."""
+    A.cue = 'G dawn · goodnight'
+    g = Grid(245.4, 70); b = g.b
+    # bars 1–4: sunrise
+    pick(g(1), g(4), b, ['F9', 'Bb7', 'Am7'], 34)
+    A.seq(g(1, 1), b, 'C5:.5 D5:.5 F5:1 A5:1 G5:.5 F5:.5 | D5:3 r:1', 40, 'flute')
+    A.seq(g(3, 2), b, 'G5:.5 F5:.5 D5:1 | Bb4:1 D5:.5 C5:.5 C5:2', 30, 'vib')
+    pick_half(g(4), g(5), b, ['Gm9'], 28)
+    # bars 5–8: asleep; the little friend goes home and types (the guitar keeps the time underneath)
+    pick_half(g(5), g(9), b, ['F9', 'Bb7', 'F9', 'Dm9'], 24)
+    A.ch(g(5), g.bar * 0.9, 'F3 C4 G4', 18, 'harm')
     msg = CUES['MSG']
     notes = ['C5', 'D5', 'F5', 'A5', 'G5', 'F5', 'D5', 'F5', 'C6']
-    for k in range(len(msg['text'])): A.n(msg['t0'] + k / msg['rate'], 0.35, notes[k % len(notes)], 44, 'sq')
-    chippad(msg['t0'], 4.2, 'F9', 26)
-    A.n(270.6, 0.9, 'A5', 40, 'sq', glide=-7)                                    # a tiny yawn
-    chippad(271.3, 3.0, 'F6', 22)
-    # the room in the morning: the tune's last phrase, resolving home
-    beat = 60 / 60
-    f = T['final'] + 0.4
-    pick(f, 280.5, beat, ['Bb7', 'F9'], 30)
-    A.seq(f + 0.5, beat, 'E5:.5 D5:.5 C5:1 D5:1 E5:1 | F5:4', 38, 'vib')
+    for k in range(len(msg['text'])): A.n(msg['t0'] + k / msg['rate'], 0.35, notes[k % len(notes)], 36, 'sq')
+    # bars 9–10: the tune's last phrase; it ends on F as the credits come up
+    pick(g(9), g(10), b, ['Gm9'], 30)
+    A.seq(g(9), b, 'E5:.5 D5:.5 C5:1 D5:1 E5:1', 38, 'vib')
+    A.ch(g(10), 3.0, 'F2 C3 A3 E4', 30, 'gtr', roll=0.06); A.n(g(10), 3.0, 'F5', 36, 'vib')
+    A.clamp(281.2)
 
-def credits():
-    beat = 60 / 116
-    t0 = T['credits'] + 0.5
-    end = T['filmEnd'] - 1.6
-    strum(t0, end, beat, P1 + P2, 42); bassline(t0, end, beat, P1 + P2, 58); brushes(t0, end, beat, 0.9)
-    chipbass(t0, end, beat, P1 + P2, 50); chipdrums(t0, end, beat, 0.45); chiparp(t0 + 8 * beat, end, beat, P1 + P2, 26)
-    e = A.seq(t0, beat, THEME_A, 54, 'vib'); A.seq(t0, beat, THEME_A, 40, 'lead')
-    A.seq(e, beat, THEME_B, 50, 'vib', stacc=None); A.seq(e, beat, THEME_B, 36, 'lead')
-    A.n(end + 0.05, 1.4, 'F5', 50, 'vib'); A.ch(end + 0.05, 1.4, 'F3 C4 E4 A4', 40, 'gtr', roll=0.04)
-    A.n(end + 0.05, 1.0, 'F6', 40, 'bell')
+def cue_i():
+    """credits — the whole band, the tune from the top."""
+    A.cue = 'I credits'
+    g = Grid(281.4, 116); b = g.b
+    prog = P1 + P2[:2]
+    strum(g(1), g(7), b, prog, 40); bassline(g(1), g(7), b, prog, 54); brushes(g(1), g(7), b, 0.85)
+    chiparp(g(3), g(7), b, prog[2:], 22)
+    A.seq(g(1), b, THEME_A2, 50, 'vib'); A.seq(g(1), b, THEME_A2, 34, 'lead')
+    A.seq(g(5), b, 'D5:1 F5:.5 A5:.5 C6:1 A5:1 | G5:1 E5:.5 C5:.5 E5:2', 46, 'vib')
+    A.ch(g(7), 1.8, 'F2 C3 A3 F4', 40, 'gtr', roll=0.04); A.n(g(7), 1.8, 'F5', 44, 'vib'); A.n(g(7), 1.2, 'F6', 30, 'bell')
+
+CUE_FNS = (cue_a, cue_b, cue_c, cue_d1, cue_d2, cue_e, cue_f, cue_g, cue_i)
 
 def title():
     # the title card (a separate clip): the letters type in, the little friend hops on and waves
@@ -656,21 +616,37 @@ def loud(x):
     act = rms[rms > 10 ** (-45 / 20)]
     return 20 * np.log10(np.sqrt(np.mean(act ** 2))) if len(act) else -99
 
+def cue_report():
+    """print each cue's span and check that no two cues overlap (beyond a short ringing tail)"""
+    spans = {}
+    for e in A.ev:
+        if e['bus'] != 'film': continue
+        a, b = spans.get(e['cue'], (1e9, -1e9)); spans[e['cue']] = (min(a, e['t']), max(b, e['t'] + e['d']))
+    order = sorted(spans.items(), key=lambda kv: kv[1][0])
+    for (c, (a, b)) in order: print(f'  {c:22s} {a:7.2f} → {b:7.2f}  ({b - a:5.1f} s)')
+    for (c1, (a1, b1)), (c2, (a2, b2)) in zip(order, order[1:]):
+        if b1 - a2 > 1.5: print(f'  !! {c1} overlaps {c2} by {b1 - a2:.1f} s')
+
+CHIP_K = 0.43
+
 def build():
-    for fn in (night, dive, together, quiet, closing, green, dawn, credits, title): fn()
+    for fn in CUE_FNS: fn()
+    A.cue = 'title'; title()
+    cue_report()
     render_acoustic('film', os.path.join(BUILD, 'music_room.wav'))
     render_chip('film', os.path.join(BUILD, 'music_chip.wav'), DUR)
     render_acoustic('title', os.path.join(BUILD, 'title_room.wav'))
     render_chip('title', os.path.join(BUILD, 'title_chip.wav'), 7.5)
-    # match the two bands' loudness so a cut never jumps in level
+    # the chiptune voices are much hotter than the soundfont's: a fixed trim brings them to about the same loudness. The mix then sums the
+    # two stems at fixed, equal weight everywhere (they are one band, not two to switch between)
     room, _ = sf.read(os.path.join(BUILD, 'music_room.wav'), dtype='float32')
     chip, _ = sf.read(os.path.join(BUILD, 'music_chip.wav'), dtype='float32')
-    lr, lc = loud(room), loud(chip)
-    k = 10 ** ((lr - lc) / 20)
+    k = CHIP_K
+    print(f'chip/room balance: {loud(chip) + 20 * np.log10(k) - loud(room):+.1f} dB')
     sf.write(os.path.join(BUILD, 'music_chip.wav'), chip * k, SR, subtype='PCM_24')
     tc, _ = sf.read(os.path.join(BUILD, 'title_chip.wav'), dtype='float32')
     sf.write(os.path.join(BUILD, 'title_chip.wav'), tc * k, SR, subtype='PCM_24')
-    print(f'music: room {lr:.1f} dB, chip {lc:.1f} dB → chip ×{k:.2f}; {len([e for e in A.ev if e["bus"] == "film"])} notes')
+    print(f'music: chip ×{k:.2f}; {len([e for e in A.ev if e["bus"] == "film"])} notes')
 
 if __name__ == '__main__':
     build()

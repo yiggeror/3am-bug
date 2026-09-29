@@ -354,31 +354,18 @@ def s6_dawn():
     for k in range(len(msg['text'])): ev(msg['t0'] + k / msg['rate'], S.boop(760 + 60 * ((k * 5) % 7)), -26)
     ev(270.6, S.voice('yawn', 51), -28)
 
-def stem_weights(t):
-    """(room, chip): the acoustic band in his room, the chiptune band inside the code"""
-    k = kind_at(t)
-    r, c = {'room': (1.0, 0.0), 'keys': (1.0, 0.0), 'screen': (0.3, 0.9), 'cw': (0.0, 1.0), 'card': (0.0, 0.0)}[k]
-    if 82.0 <= t < 85.3: c = max(c, 0.5)                    # the glitch leaks out of the screen
-    if 160.0 <= t < 178.0: r, c = max(r, 0.4), max(c, 0.45)  # the quiet moment: both, softly
-    if 221.0 <= t < 235.0 or t >= T['credits']: r, c = 1.0, 0.8   # all green, and the credits: everyone plays
-    return r, c
-
 def music():
+    """the score: its two stems (acoustic and chiptune, already level-matched) at fixed weight, one steady level. Nothing
+    here follows the cuts: the music is a set of continuous cues and the mix leaves them alone."""
     room, sr = sf.read(os.path.join(BUILD, 'music_room.wav'), dtype='float32'); assert sr == SR
     chip, _ = sf.read(os.path.join(BUILD, 'music_chip.wav'), dtype='float32')
-    g = envelope(lambda t: db(MUSIC_G(t)), ramp=0.25)
-    wr = envelope(lambda t: stem_weights(t)[0], ramp=0.05)
-    wc = envelope(lambda t: stem_weights(t)[1], ramp=0.05)
-    for x, w, big in ((room, wr, 0.0), (chip, wc, 0.12)):
+    g = db(MUSIC_G)
+    for x, big in ((room, 0.0), (chip, 0.12)):
         n = min(len(x), M.n)
-        M.L[:n] += x[:n, 0] * g[:n] * w[:n]; M.R[:n] += x[:n, 1] * g[:n] * w[:n]
-        if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * g[:n] * w[:n] * big
+        M.L[:n] += x[:n, 0] * g; M.R[:n] += x[:n, 1] * g
+        if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * g * big
 
-def MUSIC_G(t):
-    g = 5.0
-    if kind_at(t) == 'keys': g -= 2
-    if 131.4 < t < 139: g -= 2
-    return g
+MUSIC_G = 5.0
 
 def master(out, fade_in=None, target=-18.0, gain_db=None):
     irL, irR = room_ir(0.4, 1.0, 4500, 1)
@@ -417,8 +404,8 @@ def title_clip(with_music):
     if with_music:
         for fn, big in (('title_room.wav', 0.0), ('title_chip.wav', 0.12)):
             x, _ = sf.read(os.path.join(BUILD, fn), dtype='float32'); n = min(len(x), M.n)
-            M.L[:n] += x[:n, 0] * db(5.0); M.R[:n] += x[:n, 1] * db(5.0)
-            if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * db(5.0) * big
+            M.L[:n] += x[:n, 0] * db(MUSIC_G); M.R[:n] += x[:n, 1] * db(MUSIC_G)
+            if big: M.big[:n] += (x[:n, 0] + x[:n, 1]) * 0.5 * db(MUSIC_G) * big
     # fade out with the picture (5.7 → 6.6 s)
     a, b = int(5.7 * SR), int(6.6 * SR)
     for ch in (M.L, M.R, M.rev, M.big): ch[a:b] *= np.linspace(1, 0, b - a); ch[b:] = 0
