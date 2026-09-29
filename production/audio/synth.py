@@ -203,10 +203,14 @@ def rumble(dur=1.6, seed=3):
     x = lowpass(r.standard_normal(len(t)), 160, 4) * (0.5 + 0.5 * np.sin(2 * np.pi * 7 * t)) * np.minimum(1, t / 0.2) * np.minimum(1, (dur - t) / 0.5)
     return norm(x, 0.9)
 
+# F major pentatonic (F G A C D), in semitones from A4, over a wide range
+PENTA_F = [o * 12 + d for o in range(-2, 5) for d in (-4, -2, 0, 3, 5)]
+
 def sparkle(dur=1.0, seed=8, n=9, f_lo=2000, f_hi=5000):
     r = rng(seed); t = tt(dur); x = np.zeros(len(t))
     for i in range(n):
         t0 = r.random() * dur * 0.7; f = f_lo + r.random() * (f_hi - f_lo)
+        f = 440 * 2 ** (min(PENTA_F, key=lambda q: abs(q - 12 * np.log2(f / 440))) / 12)   # in key with the score
         m = t >= t0; u = t[m] - t0
         x[m] += np.sin(2 * np.pi * f * u) * np.exp(-u / 0.06) * (0.5 + 0.5 * r.random())
     return norm(x, 0.5)

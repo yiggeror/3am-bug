@@ -200,17 +200,17 @@ def s1_night():
     # the scratch
     scr = lambda d, seed: S.bandpass(np.random.default_rng(seed).standard_normal(int(d * SR)), 1500, 6000) * np.abs(np.sin(2 * np.pi * 2.07 * np.arange(int(d * SR)) / SR))
     ev(9.9, 'cloth_k', -34); ev(10.0, S.norm(scr(1.6, 1), 0.5), -34, rev=0.05)
-    ev(17.4, S.soft_error(520, 1), -34, pan=0.2)                               # red again (a soft blip, not an alarm)
+    ev(17.4, S.soft_error(523.25, 1), -34, pan=0.2)                               # red again (a soft blip, not an alarm)
     ev(17.45, S.voice('eep', 3), -38, lpf=3000, pan=0.3)                         # the little friend flinches (on screen)
     ev(18.45, 'sigh', -30, rate=0.95)
-    ev(23.72, S.soft_error(480, 2), -30)
+    ev(23.72, S.soft_error(440, 2), -30)
     ev(23.75, S.voice('eep', 4), -32)
     # hands into his hair
     ev(28.4, 'cloth', -32, maxlen=0.6, fout=0.2); ev(28.95, 'cloth_k', -28); ev(28.95, S.norm(scr(1.6, 2), 0.5), -32)
     ev(30.9, 'cloth', -34, maxlen=0.5, fout=0.2); ev(31.3, S.breath(1.1, False, 3), -30)
     ev(32.7, 'cloth_k', -34, rate=0.9)
     # the little friend, worried
-    ev(33.55, S.voice('uh', 5), -26); ev(33.8, S.bell(2637, 0.6, 0.3), -38)
+    ev(33.55, S.voice('uh', 5), -26); ev(33.8, S.bell(2093, 0.6, 0.3), -38)
     # rubbing his eyes, the big sigh
     ev(37.3, 'cloth', -34, maxlen=0.6, fout=0.2); ev(37.8, S.norm(S.lowpass(scr(1.4, 3), 2500), 0.4), -36)
     ev(40.4, S.breath(0.9, True, 4), -28); ev(41.45, 'sigh', -22, rate=0.9); ev(41.6, 'chair', -32, rate=0.85)
@@ -270,7 +270,7 @@ def s3_together():
     for b in DATA['blocks']:
         dt = b['t'] - 134.6 + 0.45
         rain.add('soft_heavy' if not b['hitsCube'] else 'punch', dt, -18 if b['hitsCube'] else -22, rate=1.0 + 0.1 * (len(b['txt']) % 3))
-        rain.add(S.soft_error(440 + 40 * (len(b['txt']) % 5), 3), dt, -32)
+        rain.add(S.soft_error([440, 523.25, 587.33, 659.25, 698.46][len(b['txt']) % 5], 3), dt, -32)   # in F, like the score
     x = rain.L + rain.R
     ev(134.6, x, 0, big=0.3)
     ev(T['hit'] + 0.05, S.voice('ow', 23), -26, big=0.3)
@@ -351,7 +351,9 @@ def s6_dawn():
     for k in range(7): ev(262.25 + k * 0.22, S.tap(60 + k, 1.3), -30)
     ev(263.9, S.voice('mm', 50), -30)
     msg = DATA['MSG']
-    for k in range(len(msg['text'])): ev(msg['t0'] + k / msg['rate'], S.boop(760 + 60 * ((k * 5) % 7)), -26)
+    for k in range(len(msg['text'])):   # each tap tuned an octave above the score's note for that character (score.cue_g)
+        midi = [72, 74, 77, 81, 79, 77, 74, 77, 84][k % 9]          # C5 D5 F5 A5 G5 F5 D5 F5 C6
+        ev(msg['t0'] + k / msg['rate'], S.boop(2 * 440 * 2 ** ((midi - 69) / 12)), -28)
     ev(270.6, S.voice('yawn', 51), -28)
 
 def music():

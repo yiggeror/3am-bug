@@ -21,7 +21,7 @@ All recordings are **CC0 / public domain**. `production/audio/sfxlib.py` trims a
 These are synthesized in code (`production/audio/synth.py`):
 - the little friend's voice, footsteps and typing
 - the bug's skitter and chitter
-- everything that only exists inside the code world: the digital hum, the glitches, the splash into the text, the searchlight, the lantern bell, the error buzz, the gate clang, the success chime and the tape stop
+- everything that only exists inside the code world: the digital hum, the glitches, the splash into the text, the searchlight, the lantern bell, the soft failure blips, the gate clang and the tape stop (all tuned to the score's key)
 - his breathing, the heartbeat and the computer's fan
 
 | Clip(s) | Source | Licence | Link |
